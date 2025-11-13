@@ -1,0 +1,11 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+/ios/
+
+# Export builds
+/export/
+
+# OS specific
+.DS_Store
+thumbs.db
