@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=7 format=3 uid="uid://co5lmcplhwff"]
 
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://bebrtnonraqil" path="res://assets/4705834820915235427.glb" id="2_0xm2m"]
@@ -8,7 +8,7 @@ resource_name = "idle"
 loop_mode = 1
 tracks/0/type = "value"
 tracks/0/imported = false
-tracks/0/enabled = true
+tracks/0/enabled = false
 tracks/0/path = NodePath(".:position")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
@@ -40,6 +40,10 @@ _data = {
 &"idle": SubResource("Animation_h2yge")
 }
 
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_0xm2m"]
+radius = 0.44921875
+height = 1.5998535
+
 [node name="main" type="Node3D"]
 script = ExtResource("1_ig7tw")
 
@@ -49,13 +53,32 @@ transform = Transform3D(-0.95706207, -0.046362545, -0.28615168, -0.1112189, 0.97
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2778165, 1.0914418, 0.16703248)
 
-[node name="4705834820915235427" parent="." instance=ExtResource("2_0xm2m")]
+[node name="Lia" parent="." instance=ExtResource("2_0xm2m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3765388, 0, 1.0329015)
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="4705834820915235427"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Lia"]
 libraries = {
 &"": SubResource("AnimationLibrary_lquwl")
 }
 autoplay = "idle"
 
-[editable path="4705834820915235427"]
+[node name="Area3D" type="Area3D" parent="Lia"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Lia/Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7742311, 0)
+shape = SubResource("CapsuleShape3D_0xm2m")
+
+[node name="CenterMarker" type="Marker3D" parent="Lia"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8832004, 0.013455987)
+
+[node name="DebugBox" type="ColorRect" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+color = Color(1, 0, 0, 1)
+
+[connection signal="input_event" from="Lia/Area3D" to="." method="_on_area_3d_input_event"]
+[connection signal="mouse_entered" from="Lia/Area3D" to="." method="_on_area_3d_mouse_entered"]
+[connection signal="mouse_exited" from="Lia/Area3D" to="." method="_on_area_3d_mouse_exited"]
+
+[editable path="Lia"]
