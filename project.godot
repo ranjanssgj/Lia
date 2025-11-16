@@ -22,6 +22,10 @@ window/size/always_on_top=true
 window/size/transparent=true
 window/per_pixel_transparency/allowed=true
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/Godot-MToon-Shader/plugin.cfg", "res://addons/vrm/plugin.cfg")
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
