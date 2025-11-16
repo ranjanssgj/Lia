@@ -1,7 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=8 format=3 uid="uid://co5lmcplhwff"]
 
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://bebrtnonraqil" path="res://assets/4705834820915235427.glb" id="2_0xm2m"]
+[ext_resource type="PackedScene" uid="uid://cs3v67nfbhkpo" path="res://chat_bubble.tscn" id="3_h2yge"]
 
 [sub_resource type="Animation" id="Animation_h2yge"]
 resource_name = "idle"
@@ -56,6 +57,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2778165, 1.0914418, 0.16703
 [node name="Lia" parent="." instance=ExtResource("2_0xm2m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3765388, 0, 1.0329015)
 
+[node name="ChatBubble" parent="Lia/Skeleton3D/Face" index="0" instance=ExtResource("3_h2yge")]
+
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Lia"]
 libraries = {
 &"": SubResource("AnimationLibrary_lquwl")
@@ -69,9 +72,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7742311, 0)
 shape = SubResource("CapsuleShape3D_0xm2m")
 
 [node name="CenterMarker" type="Marker3D" parent="Lia"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8832004, 0.013455987)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8268446, 0.013455987)
 
 [node name="DebugBox" type="ColorRect" parent="."]
+visible = false
 offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 2
@@ -82,3 +86,4 @@ color = Color(1, 0, 0, 1)
 [connection signal="mouse_exited" from="Lia/Area3D" to="." method="_on_area_3d_mouse_exited"]
 
 [editable path="Lia"]
+[editable path="Lia/Skeleton3D/Face/ChatBubble"]

@@ -17,7 +17,7 @@ var drag_offset = Vector2i() # Note: Using Vector2i for strict pixel math
 func _ready():
 	get_window().transparent_bg = true
 	# Hide the debug box if we aren't testing
-	debug_box.visible = debug_mode
+	#debug_box.visible = debug_mode
 	print("Lia: Phase 3.5 - Debug Mode Initialized")
 
 func _process(delta):
@@ -33,9 +33,9 @@ func _process(delta):
 	var top_left = screen_pos - (hitbox_size / 2)
 	
 	# 3. UPDATE DEBUG BOX (Visual Feedback)
-	if debug_mode:
-		debug_box.position = top_left
-		debug_box.size = hitbox_size
+	#if debug_mode:
+	#	debug_box.position = top_left
+	#	debug_box.size = hitbox_size
 
 	# 4. DRAGGING LOGIC
 	if is_dragging:

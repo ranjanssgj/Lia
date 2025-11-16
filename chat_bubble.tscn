@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=3 uid="uid://cs3v67nfbhkpo"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e4j1j"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.43134046, 0.4313402, 0.43134025, 0.9607843)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+corner_detail = 5
+
+[node name="ChatBubble" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_e4j1j")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+layout_mode = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="PanelContainer/VBoxContainer"]
+layout_mode = 2
+fit_content = true
+
+[node name="LineEdit" type="LineEdit" parent="PanelContainer/VBoxContainer"]
+layout_mode = 2
