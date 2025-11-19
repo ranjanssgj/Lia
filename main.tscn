@@ -1,8 +1,24 @@
-[gd_scene load_steps=8 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=9 format=3 uid="uid://co5lmcplhwff"]
 
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://bebrtnonraqil" path="res://assets/4705834820915235427.glb" id="2_0xm2m"]
 [ext_resource type="PackedScene" uid="uid://cs3v67nfbhkpo" path="res://chat_bubble.tscn" id="3_h2yge"]
+[ext_resource type="Script" uid="uid://bqu23xoq7sowq" path="res://chat_controller.gd" id="4_1bvp3"]
+
+[sub_resource type="Animation" id="Animation_1bvp3"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(-1.3765388, 0, 1.0329015)]
+}
 
 [sub_resource type="Animation" id="Animation_h2yge"]
 resource_name = "idle"
@@ -20,21 +36,6 @@ tracks/0/keys = {
 "values": [Vector3(-1.3765388, 0, 1.0329015), Vector3(-1.377, 0.5, 1.033)]
 }
 
-[sub_resource type="Animation" id="Animation_1bvp3"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:position")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector3(-1.3765388, 0, 1.0329015)]
-}
-
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_lquwl"]
 _data = {
 &"RESET": SubResource("Animation_1bvp3"),
@@ -49,15 +50,35 @@ height = 1.5998535
 script = ExtResource("1_ig7tw")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-0.95706207, -0.046362545, -0.28615168, -0.1112189, 0.97031105, 0.21477176, 0.26769876, 0.23737536, -0.9338042, -1.2985623, 1.1853218, -0.1833393)
+transform = Transform3D(-0.957062, -0.04636254, -0.28615165, -0.09038236, 0.9856455, 0.14259744, 0.27543288, 0.16233766, -0.9475141, -1.2985623, 1.1853218, -0.1833393)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2778165, 1.0914418, 0.16703248)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9392227, 0.6814207, 0.4282292)
 
 [node name="Lia" parent="." instance=ExtResource("2_0xm2m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3765388, 0, 1.0329015)
 
-[node name="ChatBubble" parent="Lia/Skeleton3D/Face" index="0" instance=ExtResource("3_h2yge")]
+[node name="ChatBubble" parent="Lia/Skeleton3D/Face" index="0" node_paths=PackedStringArray("shortcut_context") instance=ExtResource("3_h2yge")]
+offset_left = 729.0
+offset_top = 25.0
+offset_right = 769.0
+offset_bottom = 65.0
+shortcut_context = NodePath("PanelContainer/VBoxContainer/LineEdit")
+script = ExtResource("4_1bvp3")
+
+[node name="PanelContainer" parent="Lia/Skeleton3D/Face/ChatBubble" index="0"]
+offset_left = 44.0
+offset_top = 19.0
+offset_right = 112.0
+offset_bottom = 59.0
+
+[node name="RichTextLabel" parent="Lia/Skeleton3D/Face/ChatBubble/PanelContainer/VBoxContainer" index="0"]
+custom_minimum_size = Vector2(100, 0)
+
+[node name="LineEdit" parent="Lia/Skeleton3D/Face/ChatBubble/PanelContainer/VBoxContainer" index="1"]
+theme_override_constants/outline_size = 14
+
+[node name="OllamaRequest" type="HTTPRequest" parent="Lia/Skeleton3D/Face/ChatBubble"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Lia"]
 libraries = {

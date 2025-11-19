@@ -1,22 +1,37 @@
-[gd_scene load_steps=2 format=3 uid="uid://cs3v67nfbhkpo"]
+[gd_scene load_steps=4 format=3 uid="uid://cs3v67nfbhkpo"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e4j1j"]
 content_margin_left = 0.0
 content_margin_top = 0.0
 content_margin_right = 0.0
 content_margin_bottom = 0.0
-bg_color = Color(0.43134046, 0.4313402, 0.43134025, 0.9607843)
-corner_radius_top_left = 20
-corner_radius_top_right = 20
-corner_radius_bottom_right = 20
-corner_radius_bottom_left = 20
+bg_color = Color(0.101960786, 0.101960786, 0.101960786, 0.78039217)
+border_color = Color(0.973535, 0.9735351, 0.973535, 1)
+border_blend = true
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
 corner_detail = 5
+expand_margin_left = 15.0
+expand_margin_top = 10.0
+expand_margin_right = 10.0
+expand_margin_bottom = 15.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_udckb"]
+bg_color = Color(0.1764706, 0.20784314, 0.5372549, 0.7254902)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gjmhe"]
+bg_color = Color(0.1764706, 0.20784314, 0.5372549, 0.8745098)
+border_color = Color(0.6901961, 0.6901961, 0.6901961, 1)
 
 [node name="ChatBubble" type="Control"]
 layout_mode = 3
-anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 0
+pivot_offset = Vector2(50, 50)
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
 layout_mode = 0
@@ -33,3 +48,6 @@ fit_content = true
 
 [node name="LineEdit" type="LineEdit" parent="PanelContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_udckb")
+theme_override_styles/focus = SubResource("StyleBoxFlat_gjmhe")
+expand_to_text_length = true
