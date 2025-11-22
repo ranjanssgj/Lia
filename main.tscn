@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=12 format=3 uid="uid://co5lmcplhwff"]
 
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://bebrtnonraqil" path="res://assets/4705834820915235427.glb" id="2_0xm2m"]
@@ -20,12 +20,17 @@ tracks/0/keys = {
 "values": [Vector3(-1.3765388, 0, 1.0329015)]
 }
 
-[sub_resource type="Animation" id="Animation_h2yge"]
-resource_name = "idle"
-loop_mode = 1
+[sub_resource type="Animation" id="Animation_lquwl"]
+resource_name = "Jump"
+
+[sub_resource type="Animation" id="Animation_7mycd"]
+resource_name = "Angry"
+
+[sub_resource type="Animation" id="Animation_272bh"]
+resource_name = "Idle"
 tracks/0/type = "value"
 tracks/0/imported = false
-tracks/0/enabled = false
+tracks/0/enabled = true
 tracks/0/path = NodePath(".:position")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
@@ -33,13 +38,19 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0, 1),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector3(-1.3765388, 0, 1.0329015), Vector3(-1.377, 0.5, 1.033)]
+"values": [Vector3(-1.3765388, -0.4960125, 1.0329015), Vector3(-1.3765388, -0.17491865, 1.0329015)]
 }
+
+[sub_resource type="Animation" id="Animation_5vw27"]
+resource_name = "Wave"
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_lquwl"]
 _data = {
+&"Angry": SubResource("Animation_7mycd"),
+&"Idle": SubResource("Animation_272bh"),
+&"Jump": SubResource("Animation_lquwl"),
 &"RESET": SubResource("Animation_1bvp3"),
-&"idle": SubResource("Animation_h2yge")
+&"Wave": SubResource("Animation_5vw27")
 }
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_0xm2m"]
@@ -50,7 +61,8 @@ height = 1.5998535
 script = ExtResource("1_ig7tw")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-0.957062, -0.04636254, -0.28615165, -0.09038236, 0.9856455, 0.14259744, 0.27543288, 0.16233766, -0.9475141, -1.2985623, 1.1853218, -0.1833393)
+transform = Transform3D(-0.9854903, -0.02870914, 0.16728617, 0.008872769, 0.97552997, 0.2196873, -0.16949971, 0.21798398, -0.96112055, -1.3557404, 0.62074214, -0.103732824)
+fov = 77.235596
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9392227, 0.6814207, 0.4282292)
@@ -59,11 +71,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9392227, 0.6814207, 0.42822
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3765388, 0, 1.0329015)
 
 [node name="ChatBubble" parent="Lia/Skeleton3D/Face" index="0" node_paths=PackedStringArray("shortcut_context") instance=ExtResource("3_h2yge")]
-offset_left = 729.0
-offset_top = 25.0
+anchors_preset = 0
+offset_left = 682.0
+offset_top = 17.0
 offset_right = 769.0
 offset_bottom = 65.0
-shortcut_context = NodePath("PanelContainer/VBoxContainer/LineEdit")
+grow_horizontal = 1
+grow_vertical = 1
+shortcut_context = NodePath(".")
 script = ExtResource("4_1bvp3")
 
 [node name="PanelContainer" parent="Lia/Skeleton3D/Face/ChatBubble" index="0"]
@@ -84,7 +99,7 @@ theme_override_constants/outline_size = 14
 libraries = {
 &"": SubResource("AnimationLibrary_lquwl")
 }
-autoplay = "idle"
+autoplay = "Idle"
 
 [node name="Area3D" type="Area3D" parent="Lia"]
 

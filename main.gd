@@ -1,80 +1,83 @@
 extends Node3D
 
-# --- SETTINGS (Change these in the Inspector!) ---
-@export var hitbox_size = Vector2(250, 550) # Width, Height in pixels
-@export var debug_mode = true # Uncheck this when you are done testing!
+# --- SETTINGS ---
+@export var hitbox_size = Vector2(250, 550) 
+@export var debug_mode = true 
 
 # --- NODES ---
-@onready var character = $Lia
 @onready var center_marker = $Lia/CenterMarker
 @onready var camera = $Camera3D
-@onready var debug_box = $DebugBox # Make sure you added this node!
+@onready var debug_box = $DebugBox 
+
+# LINK THIS IN THE INSPECTOR!
+# If you forget, the script will now ignore it instead of crashing.
+@onready var chat_bubble = $Lia/Skeleton3D/Face/ChatBubble
 
 # --- STATE ---
 var is_dragging = false
-var drag_offset = Vector2i() # Note: Using Vector2i for strict pixel math
+var drag_offset = Vector2i()
 
 func _ready():
 	get_window().transparent_bg = true
-	# Hide the debug box if we aren't testing
-	#debug_box.visible = debug_mode
-	print("Lia: Phase 3.5 - Debug Mode Initialized")
+	# We start with NO passthrough (Solid) to ensure we catch the first frame
+	get_window().mouse_passthrough = false
+	
+	if debug_mode:
+		debug_box.visible = false
+	
+	print("Lia: Smart Hitbox Engine Ready.")
 
 func _process(delta):
-	# 1. EXIT KEY
 	if Input.is_action_just_pressed("ui_cancel"):
 		get_tree().quit()
 
-	# 2. CALCULATE SCREEN POSITION
-	# Where is the character on the 2D screen?
+	# --- 1. CALCULATE BODY AREA ---
+	# Project the 3D center marker to a 2D screen rectangle
 	var screen_pos = camera.unproject_position(center_marker.global_position)
-	
-	# Calculate the box corners based on the center point
 	var top_left = screen_pos - (hitbox_size / 2)
-	
-	# 3. UPDATE DEBUG BOX (Visual Feedback)
-	#if debug_mode:
-	#	debug_box.position = top_left
-	#	debug_box.size = hitbox_size
+	var final_rect = Rect2(top_left, hitbox_size)
 
-	# 4. DRAGGING LOGIC
+	# --- 2. ADD CHAT BUBBLE (Safety Check) ---
+	# Only try to add the bubble if the node is actually assigned!
+	if chat_bubble and chat_bubble.visible:
+		var ui_rect = chat_bubble.get_global_rect()
+		# "Merge" creates a big box that covers both the Body and the Bubble
+		final_rect = final_rect.merge(ui_rect)
+
+	# --- 3. UPDATE VISUAL DEBUGGER ---
+	if debug_mode:
+		debug_box.position = final_rect.position
+		debug_box.size = final_rect.size
+
+	# --- 4. SEND THE SHAPE TO LINUX ---
 	if is_dragging:
-		var current_mouse_pos = DisplayServer.mouse_get_position()
-		# Force move the window using integers
-		var new_pos = current_mouse_pos - drag_offset
-		get_window().position = new_pos
-		
-		# Keep the window solid while dragging so we don't lose grip
+		# While dragging, we make the window completely solid to prevent dropping her
 		DisplayServer.window_set_mouse_passthrough([], get_window().get_window_id())
 		
-	else:
-		# 5. DYNAMIC HITBOX (The Passthrough)
-		var bottom_right = screen_pos + (hitbox_size / 2)
+		# Handle movement (Universal)
+		var current_mouse_pos = DisplayServer.mouse_get_position()
+		var new_pos = current_mouse_pos - drag_offset
+		DisplayServer.window_set_position(new_pos, get_window().get_window_id())
 		
-		# Define the clickable polygon
+	else:
+		# Define the Polygon (The 4 corners of our 'Final Rect')
 		var polygon = PackedVector2Array([
-			Vector2(top_left.x, top_left.y),
-			Vector2(bottom_right.x, top_left.y),
-			Vector2(bottom_right.x, bottom_right.y),
-			Vector2(top_left.x, bottom_right.y)
+			Vector2(final_rect.position.x, final_rect.position.y),
+			Vector2(final_rect.end.x, final_rect.position.y),
+			Vector2(final_rect.end.x, final_rect.end.y),
+			Vector2(final_rect.position.x, final_rect.end.y)
 		])
 		
-		# Send to Linux
+		# Tell the OS: "Only these pixels are clickable!"
 		DisplayServer.window_set_mouse_passthrough(polygon, get_window().get_window_id())
 
 # --- INPUT ---
 func _on_area_3d_input_event(camera, event, position, normal, shape_idx):
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			if event.pressed:
-				is_dragging = true
-				# Calculate offset using Integers (Vector2i) prevents jitter
-				var win_pos = get_window().position
-				var mouse_pos = DisplayServer.mouse_get_position()
-				drag_offset = mouse_pos - win_pos
-			else:
-				is_dragging = false
-				
-	#
-		
-		
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			is_dragging = true
+			var win_pos = DisplayServer.window_get_position(get_window().get_window_id())
+			var mouse_pos = DisplayServer.mouse_get_position()
+			drag_offset = mouse_pos - win_pos
+		else:
+			is_dragging = false
