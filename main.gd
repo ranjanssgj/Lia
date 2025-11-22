@@ -11,7 +11,7 @@ extends Node3D
 
 # LINK THIS IN THE INSPECTOR!
 # If you forget, the script will now ignore it instead of crashing.
-@onready var chat_bubble = $Lia/Skeleton3D/Face/ChatBubble
+@onready var chat_bubble = $Lia/GeneralSkeleton/Face/ChatBubble
 
 # --- STATE ---
 var is_dragging = false

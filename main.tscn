@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=14 format=3 uid="uid://co5lmcplhwff"]
 
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://bebrtnonraqil" path="res://assets/4705834820915235427.glb" id="2_0xm2m"]
@@ -6,71 +6,55 @@
 [ext_resource type="Script" uid="uid://bqu23xoq7sowq" path="res://chat_controller.gd" id="4_1bvp3"]
 
 [sub_resource type="Animation" id="Animation_1bvp3"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:position")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector3(-1.3765388, 0, 1.0329015)]
-}
-
-[sub_resource type="Animation" id="Animation_lquwl"]
 resource_name = "Jump"
 
-[sub_resource type="Animation" id="Animation_7mycd"]
+[sub_resource type="Animation" id="Animation_lquwl"]
 resource_name = "Angry"
+
+[sub_resource type="Animation" id="Animation_7mycd"]
+resource_name = "Wave"
 
 [sub_resource type="Animation" id="Animation_272bh"]
 resource_name = "Idle"
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:position")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 1),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Vector3(-1.3765388, -0.4960125, 1.0329015), Vector3(-1.3765388, -0.17491865, 1.0329015)]
-}
 
 [sub_resource type="Animation" id="Animation_5vw27"]
-resource_name = "Wave"
+resource_name = "Surprised"
 
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_lquwl"]
+[sub_resource type="Animation" id="Animation_kek77"]
+resource_name = "Blush"
+
+[sub_resource type="Animation" id="Animation_4c57u"]
+resource_name = "Walk"
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_efxa6"]
 _data = {
-&"Angry": SubResource("Animation_7mycd"),
+&"Angry": SubResource("Animation_lquwl"),
+&"Blush": SubResource("Animation_kek77"),
 &"Idle": SubResource("Animation_272bh"),
-&"Jump": SubResource("Animation_lquwl"),
-&"RESET": SubResource("Animation_1bvp3"),
-&"Wave": SubResource("Animation_5vw27")
+&"Jump": SubResource("Animation_1bvp3"),
+&"Surprised": SubResource("Animation_5vw27"),
+&"Walk": SubResource("Animation_4c57u"),
+&"Wave": SubResource("Animation_7mycd")
 }
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_0xm2m"]
 radius = 0.44921875
-height = 1.5998535
+height = 1.6304932
 
 [node name="main" type="Node3D"]
 script = ExtResource("1_ig7tw")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-0.9854903, -0.02870914, 0.16728617, 0.008872769, 0.97552997, 0.2196873, -0.16949971, 0.21798398, -0.96112055, -1.3557404, 0.62074214, -0.103732824)
+transform = Transform3D(-0.9849734, -0.045822967, 0.16651657, -0.016854081, 0.98506093, 0.1713799, -0.17188208, 0.16599813, -0.97103107, -1.2971796, 0.99591607, -0.14284408)
 fov = 77.235596
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9392227, 0.6814207, 0.4282292)
 
 [node name="Lia" parent="." instance=ExtResource("2_0xm2m")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3765388, 0, 1.0329015)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3765388, -0.08452618, 1.0329015)
 
-[node name="ChatBubble" parent="Lia/Skeleton3D/Face" index="0" node_paths=PackedStringArray("shortcut_context") instance=ExtResource("3_h2yge")]
+[node name="ChatBubble" parent="Lia/GeneralSkeleton/Face" index="0" node_paths=PackedStringArray("shortcut_context") instance=ExtResource("3_h2yge")]
 anchors_preset = 0
 offset_left = 682.0
 offset_top = 17.0
@@ -81,30 +65,29 @@ grow_vertical = 1
 shortcut_context = NodePath(".")
 script = ExtResource("4_1bvp3")
 
-[node name="PanelContainer" parent="Lia/Skeleton3D/Face/ChatBubble" index="0"]
+[node name="PanelContainer" parent="Lia/GeneralSkeleton/Face/ChatBubble" index="0"]
 offset_left = 44.0
 offset_top = 19.0
 offset_right = 112.0
 offset_bottom = 59.0
 
-[node name="RichTextLabel" parent="Lia/Skeleton3D/Face/ChatBubble/PanelContainer/VBoxContainer" index="0"]
+[node name="RichTextLabel" parent="Lia/GeneralSkeleton/Face/ChatBubble/PanelContainer/VBoxContainer" index="0"]
 custom_minimum_size = Vector2(100, 0)
 
-[node name="LineEdit" parent="Lia/Skeleton3D/Face/ChatBubble/PanelContainer/VBoxContainer" index="1"]
+[node name="LineEdit" parent="Lia/GeneralSkeleton/Face/ChatBubble/PanelContainer/VBoxContainer" index="1"]
 theme_override_constants/outline_size = 14
 
-[node name="OllamaRequest" type="HTTPRequest" parent="Lia/Skeleton3D/Face/ChatBubble"]
+[node name="OllamaRequest" type="HTTPRequest" parent="Lia/GeneralSkeleton/Face/ChatBubble"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Lia"]
 libraries = {
-&"": SubResource("AnimationLibrary_lquwl")
+&"": SubResource("AnimationLibrary_efxa6")
 }
-autoplay = "Idle"
 
 [node name="Area3D" type="Area3D" parent="Lia"]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Lia/Area3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7742311, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7895509, 0)
 shape = SubResource("CapsuleShape3D_0xm2m")
 
 [node name="CenterMarker" type="Marker3D" parent="Lia"]
@@ -122,4 +105,4 @@ color = Color(1, 0, 0, 1)
 [connection signal="mouse_exited" from="Lia/Area3D" to="." method="_on_area_3d_mouse_exited"]
 
 [editable path="Lia"]
-[editable path="Lia/Skeleton3D/Face/ChatBubble"]
+[editable path="Lia/GeneralSkeleton/Face/ChatBubble"]
