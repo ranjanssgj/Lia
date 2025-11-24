@@ -120,8 +120,8 @@ func parse_and_animate(text: String):
 		"[HAPPY]": "Jump",      # Maps to your 'Jump' animation
 		"[ANGRY]": "Angry",     # Maps to 'Angry'
 		"[WAVE]": "Wave",       # Maps to 'Wave'
-		"[SURPRISED]": "Jump",  # Re-use Jump for now
-		"[BLUSH]": "Idle",      # Re-use Idle for now
+		"[SURPRISED]": "Surprised",  # Re-use Jump for now
+		"[BLUSH]": "Blush",      # Re-use Idle for now
 		"[THINK]": "Idle",      # Re-use Idle for now
 		"[HIDE]": "Hide"        # SPECIAL: We will build this in Layer 4
 	}
