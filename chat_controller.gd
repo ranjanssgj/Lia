@@ -47,11 +47,11 @@ func _on_text_submitted(new_text: String):
 	var system_prompt = """
 	You are Lia, a desktop companion. Keep replies short and cute.
 	Use these tags at the START of your sentence to act:
+	[SALUTE] - If the user says they are working/busy.
 	[HAPPY] - If excited or laughing.
 	[ANGRY] - If insulted or mad.
 	[WAVE] - Hello or Goodbye.
 	[DANCE] - If asked to dance or celebrating.
-	[WORK] - If the user says they are working/busy.
 	[KISS] - Affectionate.
 	[TIRED] - If it's late or you are bored.
 	[EXERCISE] - If talking about fitness.
@@ -105,11 +105,10 @@ func parse_and_animate(text: String):
 	
 	# Mapped to your specific Animation Names
 	var tags = {
+		"[SALUTE]": "Salute",
 		"[HAPPY]": "JoyfulJump",     # Or 'Excited' / 'Happy'
 		"[ANGRY]": "Angry",
 		"[WAVE]": "Waving",          # Or 'Waving1'
-		"[SALUTE]": "Salute",
-		"[WORK]": "Salute",          # Logic for working
 		"[DANCE]": "HipHopDancing",  # Or 'JazzDancing' / 'RumbaDancing'
 		"[KISS]": "Kiss",
 		"[TIRED]": "Yawn",
