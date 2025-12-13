@@ -3,11 +3,9 @@ extends Node3D
 @export_group("Hitbox Settings")
 @export var hitbox_size = Vector2(250, 550) 
 @export var debug_mode = false
-
 @export_group("Nodes")
-@onready var chat_bubble = $Lia/Node/Armature/Skeleton3D/Face/ChatBubble
 
-# These paths assume the script is attached to 'main'!
+@onready var chat_bubble = $Lia/Node/Armature/Skeleton3D/Face/ChatBubble 
 @onready var center_marker = $Lia/CenterMarker
 @onready var camera = $Camera3D
 @onready var debug_box = $DebugBox 
@@ -23,20 +21,21 @@ var screen_size = Vector2i()
 var is_dragging = false
 var drag_offset = Vector2i()
 
+var idle_variations = ["Idle", "Yawn", "HangingIdle", "SittingIdle", "FemaleLayingPose"]
+
 func _ready():
 	get_window().transparent_bg = true
 	get_window().mouse_passthrough = false
 	screen_size = DisplayServer.screen_get_size()
 	
-	if debug_mode: debug_box.visible = false
+	if debug_mode: debug_box.visible = true
 	
-	# Timer
 	add_child(state_timer)
-	state_timer.wait_time = 10.0
+	state_timer.wait_time = 5.0
 	state_timer.timeout.connect(_on_brain_tick)
 	state_timer.start()
 	
-	print("Lia: System 1.3 Online.")
+	print("Lia: Advanced Animation Logic Online.")
 
 func _process(delta):
 	if Input.is_action_just_pressed("ui_cancel"):
@@ -50,20 +49,20 @@ func process_behavior(delta):
 
 	match current_state:
 		State.IDLE:
-			pass
+			# we don't need to force 'Idle' constantly.
+			pass 
+			
 		State.ROAMING:
 			move_window_towards(target_position, delta)
-			if animator and animator.current_animation != "Walk":
-				animator.play("Walk")
-				#temp for hypr
-				change_state(State.IDLE)
+			# "mixamo_com" is the Walking animation
+			if animator and animator.current_animation != "mixamo_com":
+				animator.play("mixamo_com")
 			
 			if at_target():
 				change_state(State.IDLE)
+				
 		State.HIDING:
 			move_window_towards(target_position, delta)
-			#temp for hypr
-			change_state(State.IDLE)
 			if at_target():
 				change_state(State.IDLE)
 
@@ -79,11 +78,29 @@ func at_target() -> bool:
 func _on_brain_tick():
 	if is_dragging: return
 	var roll = randf()
+	
 	if current_state == State.IDLE:
-		if roll < 0.4: # 40% chance to walk
+		# 30% Chance to Walk
+		if roll < 0.3: 
 			pick_random_spot()
 			change_state(State.ROAMING)
+			
+		# 30% Chance to perform a "Special Idle" (Yawn, Sit, etc)
+		elif roll < 0.6:
+			play_random_idle()
+			
+		# 40% Chance to just stay standard Idle
+		else:
+			animator.play("Idle")
+			
 	state_timer.wait_time = randf_range(5.0, 15.0)
+
+func play_random_idle():
+	var anim_name = idle_variations.pick_random()
+	
+	if animator.has_animation(anim_name):
+		animator.play(anim_name)
+		animator.queue("Idle")
 
 func pick_random_spot():
 	var margin = 100
@@ -96,39 +113,28 @@ func change_state(new_state):
 	if animator:
 		match new_state:
 			State.IDLE: animator.play("Idle")
-			State.ROAMING: 
-				if animator.has_animation("Walk"): animator.play("Walk")
-				elif  animator.has_animation("HangingIdle"): animator.play("HangingIdle")
-				else: animator.play("Idle")
-			State.HIDING:
+			State.ROAMING: animator.play("mixamo_com") # Walking
+			State.HIDING: 
 				if animator.has_animation("Hide"): animator.play("Hide")
 				else: animator.play("Idle")
-				
+
 func force_hide():
 	screen_size = DisplayServer.screen_get_size()
 	var current_y = DisplayServer.window_get_position(get_window().get_window_id()).y
 	target_position = Vector2i(screen_size.x - 100, current_y)
 	change_state(State.HIDING)
 
-# ==============================================================================
-# 6. INTERACTION (HITBOX)
-# ==============================================================================
 func update_hitbox():
-	# If nodes are missing, stop to avoid crash
 	if not center_marker or not camera: return
-
 	var screen_pos = camera.unproject_position(center_marker.global_position)
 	var top_left = screen_pos - (hitbox_size / 2)
 	var final_rect = Rect2(top_left, hitbox_size)
-
 	if chat_bubble and chat_bubble.visible:
 		var ui_rect = chat_bubble.get_global_rect()
 		final_rect = final_rect.merge(ui_rect)
-
 	if debug_mode and debug_box:
 		debug_box.position = final_rect.position
 		debug_box.size = final_rect.size
-
 	if is_dragging:
 		var current_mouse_pos = DisplayServer.mouse_get_position()
 		var new_pos = current_mouse_pos - drag_offset

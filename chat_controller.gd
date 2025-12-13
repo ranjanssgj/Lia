@@ -51,7 +51,7 @@ func _on_text_submitted(new_text: String):
 	[ANGRY] - If insulted or mad.
 	[WAVE] - Hello or Goodbye.
 	[DANCE] - If asked to dance or celebrating.
-	[WORK] - If the user says they are working/busy (Salute them).
+	[WORK] - If the user says they are working/busy.
 	[KISS] - Affectionate.
 	[TIRED] - If it's late or you are bored.
 	[EXERCISE] - If talking about fitness.
@@ -128,6 +128,7 @@ func parse_and_animate(text: String):
 			break
 	
 	output_label.text = "Lia: " + clean_text.strip_edges()
+	print(emotion) #TEMPORARY
 	
 	if emotion == "Hide":
 		var main_node = get_tree().current_scene
