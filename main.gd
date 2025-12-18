@@ -5,6 +5,7 @@ extends Node3D
 @export var debug_mode = false
 @export_group("Nodes")
 
+@onready var activity_monitor = $ActivityMonitor
 @onready var chat_bubble = $Lia/Node/Armature/Skeleton3D/Face/ChatBubble 
 @onready var center_marker = $Lia/CenterMarker
 @onready var camera = $Camera3D
@@ -36,6 +37,9 @@ func _ready():
 	state_timer.start()
 	
 	print("Lia: Advanced Animation Logic Online.")
+	activity_monitor.user_is_working.connect(_on_user_working)
+	activity_monitor.user_is_bored.connect(_on_user_bored)
+	activity_monitor.user_is_active.connect(_on_user_active)
 
 func _process(delta):
 	if Input.is_action_just_pressed("ui_cancel"):
@@ -158,3 +162,17 @@ func _on_area_3d_input_event(camera, event, position, normal, shape_idx):
 			drag_offset = mouse_pos - win_pos
 		else:
 			is_dragging = false
+
+func _on_user_working():
+	if animator.current_animation != "Salute":
+		print("Lia: User is focused. Saluting.")
+		animator.play("Salute")
+
+func _on_user_bored():
+	var bored_anims = ["Yawn", "SittingIdle", "HangingIdle"]
+	if animator.has_animation("Yawn"):
+		animator.play(bored_anims.pick_random())
+
+func _on_user_active():
+	if animator.current_animation == "Yawn" or animator.current_animation == "SittingIdle":
+		animator.play("Idle")

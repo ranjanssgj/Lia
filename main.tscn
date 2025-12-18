@@ -1,5 +1,6 @@
-[gd_scene load_steps=6 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=7 format=3 uid="uid://co5lmcplhwff"]
 
+[ext_resource type="Script" uid="uid://dgpuscn53fv15" path="res://activity_monitor.gd" id="1_1bvp3"]
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://c2gd4vkyey36n" path="res://assets/Lia.glb" id="2_1bvp3"]
 [ext_resource type="PackedScene" uid="uid://cs3v67nfbhkpo" path="res://chat_bubble.tscn" id="3_h2yge"]
@@ -233,6 +234,9 @@ offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 2
 color = Color(1, 0, 0, 1)
+
+[node name="ActivityMonitor" type="Node" parent="."]
+script = ExtResource("1_1bvp3")
 
 [editable path="Lia"]
 [editable path="Lia/Node/Armature/Skeleton3D/Face/ChatBubble"]
