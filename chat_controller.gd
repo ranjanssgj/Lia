@@ -7,9 +7,9 @@ const MODEL_NAME = "llama3.2:1b"
 @onready var input_field = $PanelContainer/VBoxContainer/LineEdit
 @onready var http = $OllamaRequest
 
-# Reference to the Memory Manager (Autoload)
-# Go to Project -> Project Settings -> Autoload -> Add "res://memory_manager.gd" as "Memory"
+# Reference to Memory (Autoload)
 var animator: AnimationPlayer
+var is_setup_mode = false # Are we currently asking for the name?
 
 func _ready():
 	if owner: animator = owner.find_child("AnimationPlayer", true, false)
@@ -18,37 +18,56 @@ func _ready():
 	input_field.text_submitted.connect(_on_text_submitted)
 	http.request_completed.connect(_on_request_completed)
 	
-	# Greet using memory
-	output_label.text = "Lia: Hi " + Memory.context_data["user_name"] + "!"
+	# --- FIRST RUN CHECK ---
+	# Check if the user is still named "User" (Default)
+	if Memory.context_data["user_name"] == "User":
+		start_setup_mode()
+	else:
+		output_label.text = "Lia: Welcome back, " + Memory.context_data["user_name"] + "!"
+
+func start_setup_mode():
+	is_setup_mode = true
+	output_label.text = "Lia: Hello! I don't know your name yet.\nWhat should I call you?"
 
 func _on_text_submitted(new_text: String):
 	if new_text.strip_edges() == "": return
 	
-	output_label.text = "You: " + new_text + "\n..."
 	input_field.clear()
+	
+	# --- HANDLE SETUP MODE (Name Input) ---
+	if is_setup_mode:
+		# Save the name
+		var name = new_text.strip_edges()
+		Memory.context_data["user_name"] = name
+		Memory.save_memory() # Write to disk
+		
+		output_label.text = "Lia: Nice to meet you, " + name + "!\n(Context Saved)"
+		is_setup_mode = false # Switch back to normal chat
+		return
+
+	# --- NORMAL CHAT MODE ---
+	output_label.text = "You: " + new_text + "\n..."
 	input_field.editable = false
 	
-	# 1. GET CONTEXT FROM MEMORY
 	var context_block = Memory.get_system_context()
 	
-	# 2. CONSTRUCT DYNAMIC PROMPT
+	# Updated prompt to force TEXT after the tag
 	var system_prompt = """
-	You are Lia, a desktop companion. 
+	You are Lia. 
 	%s
 	
 	INSTRUCTIONS:
-	- Keep replies short (under 15 words).
-	- Respond to the user's input based on the Context above.
-	- START your reply with an emotion tag.
+	1. You MUST include a text reply after the tag.
+	2. Keep it cute and short.
+	3. Format: [TAG] Your Message Here.
 	
-	TAGS (Choose ONE):
-	[WORK] - If user mentions working/studying.
-	[HAPPY] - Positive/Excited.
-	[ANGRY] - Negative/Insulted.
-	[WAVE] - Hello/Goodbye.
-	[DANCE] - Celebration.
-	[TIRED] - Boredom/Sleep.
-	[IDLE] - Default/Neutral.
+	TAGS:
+	[WORK] - User is working.
+	[HAPPY] - Excited.
+	[ANGRY] - Mad.
+	[WAVE] - Hello/Bye.
+	[DANCE] - Celebrate.
+	[IDLE] - Normal chat.
 	""" % context_block
 
 	var data = {
@@ -63,31 +82,17 @@ func _on_text_submitted(new_text: String):
 
 func _on_request_completed(result, response_code, headers, body):
 	input_field.editable = true
-	
-	if response_code != 200:
-		output_label.text = "Error: AI disconnected."
-		print("HTTP Error: ", response_code)
-		return
-
-	var json = JSON.new()
-	var parse_result = json.parse(body.get_string_from_utf8())
-	
-	if parse_result == OK:
-		var response = json.get_data()
-		if "response" in response:
+	if response_code == 200:
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) == OK:
+			var response = json.get_data()
 			var raw_text = response["response"]
-			print("AI RAW OUTPUT: ", raw_text) # DEBUG: Check this in console!
 			parse_and_animate(raw_text)
-		else:
-			print("Error: JSON missing 'response' key")
-	else:
-		output_label.text = "Error parsing JSON."
 
 func parse_and_animate(text: String):
 	var clean_text = text
-	var emotion = "Idle" # Default
+	var emotion = "Idle" 
 	
-	# Tag Mapping
 	var tags = {
 		"[WORK]": "Salute",
 		"[HAPPY]": "JoyfulJump",
@@ -98,19 +103,29 @@ func parse_and_animate(text: String):
 		"[IDLE]": "Idle"
 	}
 	
-	# Find the first matching tag
+	# Improved Parser: Finds the tag, plays animation, removes tag from text
 	for tag in tags:
-		if tag in text:
+		if text.contains(tag): # 'contains' is safer than 'in' for some string types
 			emotion = tags[tag]
-			clean_text = text.replace(tag, "")
+			clean_text = text.replace(tag, "") # Remove the tag
 			break
 	
-	# Update UI
+	# If the AI forgot to write text and only sent "[TAG]", handle it gracefully
+	if clean_text.strip_edges() == "":
+		clean_text = "..." # Or some default "I'm listening" text
+	
 	output_label.text = "Lia: " + clean_text.strip_edges()
 	
-	# Play Animation (Only if it exists)
-	if animator and animator.has_animation(emotion):
-		# Prevent restarting the same animation if it's already looping
+	if emotion == "Hide":
+		var main_node = get_tree().current_scene
+		if main_node.has_method("force_hide"):
+			main_node.force_hide()
+	
+	elif animator and animator.has_animation(emotion):
+		# TELL MAIN WE ARE CHATTING
+		var main_node = get_tree().current_scene
+		if "is_chatting" in main_node:
+			main_node.is_chatting = true
+			
 		if animator.current_animation != emotion:
 			animator.play(emotion)
-			animator.queue("Idle")

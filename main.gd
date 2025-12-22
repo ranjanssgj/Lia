@@ -21,7 +21,7 @@ var move_speed = 150.0
 var screen_size = Vector2i()
 var is_dragging = false
 var drag_offset = Vector2i()
-
+var is_chatting = false
 var idle_variations = ["Idle", "Yawn", "HangingIdle", "SittingIdle", "FemaleLayingPose"]
 
 func _ready():
@@ -40,6 +40,8 @@ func _ready():
 	activity_monitor.user_is_working.connect(_on_user_working)
 	activity_monitor.user_is_bored.connect(_on_user_bored)
 	activity_monitor.user_is_active.connect(_on_user_active)
+	
+	animator.animation_finished.connect(_on_animation_finished)
 
 func _process(delta):
 	if Input.is_action_just_pressed("ui_cancel"):
@@ -80,6 +82,9 @@ func at_target() -> bool:
 	return Vector2(current_pos).distance_to(Vector2(target_position)) < 10.0
 
 func _on_brain_tick():
+	if is_chatting or (chat_bubble and chat_bubble.visible):
+		return
+	
 	if is_dragging: return
 	var roll = randf()
 	
@@ -164,15 +169,26 @@ func _on_area_3d_input_event(camera, event, position, normal, shape_idx):
 			is_dragging = false
 
 func _on_user_working():
+	if is_chatting: return # IGNORE if chatting
 	if animator.current_animation != "Salute":
-		print("Lia: User is focused. Saluting.")
+		print("Lia: User working. Saluting.")
 		animator.play("Salute")
 
 func _on_user_bored():
+	if is_chatting: return # IGNORE if chatting
 	var bored_anims = ["Yawn", "SittingIdle", "HangingIdle"]
-	if animator.has_animation("Yawn"):
+	if animator.has_animation("Yawn"): # Safety check
 		animator.play(bored_anims.pick_random())
 
 func _on_user_active():
-	if animator.current_animation == "Yawn" or animator.current_animation == "SittingIdle":
+	if is_chatting: return # IGNORE if chatting
+	# Only wake up if she was actually sleeping/saluting
+	if animator.current_animation in ["Salute", "Yawn", "SittingIdle"]:
+		animator.play("Idle")
+
+func _on_animation_finished(anim_name):
+	# If a chat animation (like JoyfulJump) just finished, we are done chatting.
+	# We can now listen to the system state again.
+	if is_chatting:
+		is_chatting = false
 		animator.play("Idle")
