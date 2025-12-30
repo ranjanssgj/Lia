@@ -9,3 +9,8 @@
 # OS specific
 .DS_Store
 thumbs.db
+
+# Ignore AI Models
+*.gguf
+*.bin
+Modelfile
