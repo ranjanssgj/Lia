@@ -3,8 +3,8 @@ extends Node3D
 @export_group("Hitbox Settings")
 @export var hitbox_size = Vector2(250, 550) 
 @export var debug_mode = false
-@export_group("Nodes")
 
+@export_group("Nodes")
 @onready var activity_monitor = $ActivityMonitor
 @onready var chat_bubble = $Lia/Node/Armature/Skeleton3D/Face/ChatBubble 
 @onready var center_marker = $Lia/CenterMarker
@@ -12,6 +12,12 @@ extends Node3D
 @onready var debug_box = $DebugBox 
 @onready var animator = $Lia/AnimationPlayer 
 @onready var skeleton = $Lia/Node/Armature/Skeleton3D 
+
+# --- OBSERVER MODE SETTINGS ---
+@export_group("Observer Settings")
+@export var head_bone_name: String = "Head" # Check your Skeleton for exact name!
+@export var track_mouse = true
+var head_bone_idx = -1
 
 enum State { IDLE, ROAMING, HIDING }
 var current_state = State.IDLE
@@ -21,13 +27,21 @@ var move_speed = 150.0
 var screen_size = Vector2i()
 var is_dragging = false
 var drag_offset = Vector2i()
-var is_chatting = false
-var idle_variations = ["Idle", "Yawn", "HangingIdle", "SittingIdle", "FemaleLayingPose"]
+
+# CONFLICT MANAGER FLAG
+var is_chatting = false 
+
+var idle_timer = 0.0
+var time_until_bored = 8.0 
 
 func _ready():
 	get_window().transparent_bg = true
 	get_window().mouse_passthrough = false
 	screen_size = DisplayServer.screen_get_size()
+	
+	# Find Head Bone for Tracking
+	head_bone_idx = skeleton.find_bone(head_bone_name)
+	if head_bone_idx == -1: print("Lia Warning: Head bone not found!")
 	
 	if debug_mode: debug_box.visible = true
 	
@@ -36,7 +50,7 @@ func _ready():
 	state_timer.timeout.connect(_on_brain_tick)
 	state_timer.start()
 	
-	print("Lia: Advanced Animation Logic Online.")
+	print("Lia: v3 Logic Online.")
 	activity_monitor.user_is_working.connect(_on_user_working)
 	activity_monitor.user_is_bored.connect(_on_user_bored)
 	activity_monitor.user_is_active.connect(_on_user_active)
@@ -44,26 +58,44 @@ func _ready():
 	animator.animation_finished.connect(_on_animation_finished)
 
 func _process(delta):
-	if Input.is_action_just_pressed("ui_cancel"):
-		get_tree().quit()
-
-	process_behavior(delta) 
+	if Input.is_action_just_pressed("ui_cancel"): get_tree().quit()
+	
+	# This was causing your error - the function is defined below now
 	update_hitbox()
-
-func process_behavior(delta):
+	
 	if is_dragging: return
 
+	# --- CONFLICT MANAGER ---
+	# If Chatting, AI has control. Physics/Reflexes are disabled.
+	if is_chatting:
+		return 
+
+	# --- OBSERVER MODE (Reflex Brain) ---
+	handle_observer_mode(delta)
+	process_behavior(delta) 
+
+func handle_observer_mode(delta):
+	if not track_mouse or head_bone_idx == -1: return
+	
+	# 1. MOUSE VELOCITY CHECK (Wake up if user moves mouse fast)
+	if Input.get_last_mouse_velocity().length() > 50.0:
+		idle_timer = 0.0 # Reset boredom
+		# If she was deep chilling, wake her up
+		if animator.current_animation == "Sit_Chill":
+			animator.play("Idle", 0.5)
+	else:
+		idle_timer += delta
+
+	# 2. HEAD TRACKING logic
+	# Simplified look-at logic can go here if needed
+	pass 
+
+func process_behavior(delta):
 	match current_state:
-		State.IDLE:
-			# we don't need to force 'Idle' constantly.
-			pass 
-			
 		State.ROAMING:
 			move_window_towards(target_position, delta)
-			# "mixamo_com" is the Walking animation
-			if animator and animator.current_animation != "mixamo_com":
+			if animator.current_animation != "mixamo_com":
 				animator.play("mixamo_com")
-			
 			if at_target():
 				change_state(State.IDLE)
 				
@@ -71,6 +103,33 @@ func process_behavior(delta):
 			move_window_towards(target_position, delta)
 			if at_target():
 				change_state(State.IDLE)
+
+func _on_brain_tick():
+	# CONFLICT MANAGER: Don't do random stuff if talking
+	if is_chatting or (chat_bubble and chat_bubble.visible): return
+	if is_dragging or current_state != State.IDLE: return
+	
+	# --- BOREDOM LOGIC ---
+	if idle_timer > time_until_bored:
+		if animator.current_animation != "Sit_Chill":
+			animator.play("Sit_Chill")
+		return
+
+	# --- RANDOM BEHAVIOR ---
+	var roll = randf()
+	if roll < 0.3: 
+		pick_random_spot()
+		change_state(State.ROAMING)
+	elif roll < 0.6:
+		var random_anims = ["Yawn", "HangingIdle", "SittingIdle"]
+		animator.play(random_anims.pick_random())
+		animator.queue("Idle")
+	else:
+		animator.play("Idle")
+	
+	state_timer.wait_time = randf_range(5.0, 15.0)
+
+# --- HELPER FUNCTIONS (Restored) ---
 
 func move_window_towards(target: Vector2i, delta):
 	var current_pos = DisplayServer.window_get_position(get_window().get_window_id())
@@ -81,36 +140,6 @@ func at_target() -> bool:
 	var current_pos = DisplayServer.window_get_position(get_window().get_window_id())
 	return Vector2(current_pos).distance_to(Vector2(target_position)) < 10.0
 
-func _on_brain_tick():
-	if is_chatting or (chat_bubble and chat_bubble.visible):
-		return
-	
-	if is_dragging: return
-	var roll = randf()
-	
-	if current_state == State.IDLE:
-		# 30% Chance to Walk
-		if roll < 0.3: 
-			pick_random_spot()
-			change_state(State.ROAMING)
-			
-		# 30% Chance to perform a "Special Idle" (Yawn, Sit, etc)
-		elif roll < 0.6:
-			play_random_idle()
-			
-		# 40% Chance to just stay standard Idle
-		else:
-			animator.play("Idle")
-			
-	state_timer.wait_time = randf_range(5.0, 15.0)
-
-func play_random_idle():
-	var anim_name = idle_variations.pick_random()
-	
-	if animator.has_animation(anim_name):
-		animator.play(anim_name)
-		animator.queue("Idle")
-
 func pick_random_spot():
 	var margin = 100
 	var random_x = randi_range(margin, screen_size.x - margin)
@@ -119,13 +148,12 @@ func pick_random_spot():
 
 func change_state(new_state):
 	current_state = new_state
-	if animator:
-		match new_state:
-			State.IDLE: animator.play("Idle")
-			State.ROAMING: animator.play("mixamo_com") # Walking
-			State.HIDING: 
-				if animator.has_animation("Hide"): animator.play("Hide")
-				else: animator.play("Idle")
+	match new_state:
+		State.IDLE: animator.play("Idle")
+		State.ROAMING: animator.play("mixamo_com")
+		State.HIDING: 
+			if animator.has_animation("Hide"): animator.play("Hide")
+			else: animator.play("Idle")
 
 func force_hide():
 	screen_size = DisplayServer.screen_get_size()
@@ -138,12 +166,15 @@ func update_hitbox():
 	var screen_pos = camera.unproject_position(center_marker.global_position)
 	var top_left = screen_pos - (hitbox_size / 2)
 	var final_rect = Rect2(top_left, hitbox_size)
+	
 	if chat_bubble and chat_bubble.visible:
 		var ui_rect = chat_bubble.get_global_rect()
 		final_rect = final_rect.merge(ui_rect)
+		
 	if debug_mode and debug_box:
 		debug_box.position = final_rect.position
 		debug_box.size = final_rect.size
+		
 	if is_dragging:
 		var current_mouse_pos = DisplayServer.mouse_get_position()
 		var new_pos = current_mouse_pos - drag_offset
@@ -169,26 +200,24 @@ func _on_area_3d_input_event(camera, event, position, normal, shape_idx):
 			is_dragging = false
 
 func _on_user_working():
-	if is_chatting: return # IGNORE if chatting
+	if is_chatting: return 
 	if animator.current_animation != "Salute":
 		print("Lia: User working. Saluting.")
 		animator.play("Salute")
 
 func _on_user_bored():
-	if is_chatting: return # IGNORE if chatting
+	if is_chatting: return
 	var bored_anims = ["Yawn", "SittingIdle", "HangingIdle"]
-	if animator.has_animation("Yawn"): # Safety check
+	if animator.has_animation("Yawn"): 
 		animator.play(bored_anims.pick_random())
 
 func _on_user_active():
-	if is_chatting: return # IGNORE if chatting
-	# Only wake up if she was actually sleeping/saluting
-	if animator.current_animation in ["Salute", "Yawn", "SittingIdle"]:
+	if is_chatting: return
+	if animator.current_animation in ["Salute", "Yawn", "SittingIdle", "Sit_Chill"]:
 		animator.play("Idle")
 
 func _on_animation_finished(anim_name):
-	# If a chat animation (like JoyfulJump) just finished, we are done chatting.
-	# We can now listen to the system state again.
+	# Unlocks conflict manager when AI animation finishes
 	if is_chatting:
 		is_chatting = false
 		animator.play("Idle")

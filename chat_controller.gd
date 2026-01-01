@@ -1,15 +1,28 @@
 extends Control
 
 const OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-const MODEL_NAME = "llama3.2:1b"
+const MODEL_NAME = "lia-v3" 
 
 @onready var output_label = $PanelContainer/VBoxContainer/RichTextLabel
 @onready var input_field = $PanelContainer/VBoxContainer/LineEdit
 @onready var http = $OllamaRequest
+@onready var main_node = get_tree().current_scene 
 
-# Reference to Memory (Autoload)
 var animator: AnimationPlayer
-var is_setup_mode = false # Are we currently asking for the name?
+var is_setup_mode = false 
+
+# --- ANIMATION MAP ---
+var anim_map = {
+	"[JUMP]": "Jump", "[WAVE]": "Wave", "[KISS]": "Kiss",
+	"[DANCE_HIP]": "Dance_Hip", "[DANCE_JAZZ]": "Dance_Jazz", 
+	"[DANCE_RUMBA]": "Dance_Rumba", "[LAY]": "Lay_Down", 
+	"[SIT_CHILL]": "Sit_Chill", "[SIT_FOCUS]": "Sit_Focus", 
+	"[PRAY]": "Pray", "[SALUTE]": "Salute", "[SHOCK]": "Shock", 
+	"[ANGRY]": "Angry", "[RUN]": "Run", "[WORKOUT_ABS]": "Workout_Abs", 
+	"[HANG]": "Hang", "[HIDE]": "Hide", "[YAWN]": "Yawn",
+	"[CRYING]": "Crying", "[SADIDLE]": "Sad_Idle", "[SADWALK]": "Sad_Walk",
+	"[TALK]": "Idle_Talk" 
+}
 
 func _ready():
 	if owner: animator = owner.find_child("AnimationPlayer", true, false)
@@ -18,8 +31,6 @@ func _ready():
 	input_field.text_submitted.connect(_on_text_submitted)
 	http.request_completed.connect(_on_request_completed)
 	
-	# --- FIRST RUN CHECK ---
-	# Check if the user is still named "User" (Default)
 	if Memory.context_data["user_name"] == "User":
 		start_setup_mode()
 	else:
@@ -31,49 +42,38 @@ func start_setup_mode():
 
 func _on_text_submitted(new_text: String):
 	if new_text.strip_edges() == "": return
-	
 	input_field.clear()
 	
-	# --- HANDLE SETUP MODE (Name Input) ---
+	# --- SETUP MODE ---
 	if is_setup_mode:
-		# Save the name
-		var name = new_text.strip_edges()
-		Memory.context_data["user_name"] = name
-		Memory.save_memory() # Write to disk
-		
-		output_label.text = "Lia: Nice to meet you, " + name + "!\n(Context Saved)"
-		is_setup_mode = false # Switch back to normal chat
+		Memory.context_data["user_name"] = new_text.strip_edges()
+		Memory.save_memory()
+		output_label.text = "Lia: Nice to meet you, " + new_text + "!"
+		is_setup_mode = false
 		return
 
-	# --- NORMAL CHAT MODE ---
+	# --- CHAT MODE ---
+	if main_node: main_node.is_chatting = true
+	if animator: animator.play("Thinking") 
+	
 	output_label.text = "You: " + new_text + "\n..."
 	input_field.editable = false
 	
-	var context_block = Memory.get_system_context()
+	# --- SYSTEM PROMPT INJECTION (The Fix) ---
+	# Even though the model is fine-tuned, we force the format via API to be safe.
+	var user_name = Memory.context_data["user_name"]
+	var system_prompt = """You are Lia, a loving desktop assistant.
+    User Name: %s
+    INSTRUCTIONS:
+    1. Start EVERY response with one of these tags: [JUMP], [WAVE], [KISS], [DANCE_HIP], [DANCE_JAZZ], [DANCE_RUMBA], [LAY], [SIT_CHILL], [SIT_FOCUS], [PRAY], [SALUTE], [SHOCK], [ANGRY], [RUN], [WORKOUT_ABS], [HANG], [HIDE], [YAWN], [CRYING], [SADIDLE], [SADWALK].
+    2. Example: [WAVE] Hello there!
+    3. Do not output anything else before the tag.
+	""" % user_name
 	
-	# Updated prompt to force TEXT after the tag
-	var system_prompt = """
-	You are Lia. 
-	%s
-	
-	INSTRUCTIONS:
-	1. You MUST include a text reply after the tag.
-	2. Keep it cute and short.
-	3. Format: [TAG] Your Message Here.
-	
-	TAGS:
-	[WORK] - User is working.
-	[HAPPY] - Excited.
-	[ANGRY] - Mad.
-	[WAVE] - Hello/Bye.
-	[DANCE] - Celebrate.
-	[IDLE] - Normal chat.
-	""" % context_block
-
 	var data = {
 		"model": MODEL_NAME,
 		"prompt": new_text,
-		"system": system_prompt,
+		"system": system_prompt, # <--- Explicitly sending instructions again
 		"stream": false 
 	}
 	
@@ -82,50 +82,37 @@ func _on_text_submitted(new_text: String):
 
 func _on_request_completed(result, response_code, headers, body):
 	input_field.editable = true
+	
 	if response_code == 200:
-		var json = JSON.new()
-		if json.parse(body.get_string_from_utf8()) == OK:
-			var response = json.get_data()
-			var raw_text = response["response"]
-			parse_and_animate(raw_text)
+		var json = JSON.parse_string(body.get_string_from_utf8())
+		var raw_response = json["response"]
+		parse_and_animate(raw_response)
+	else:
+		output_label.text = "Lia: Error connecting to Brain (Ollama)."
+		print("Ollama Error: ", response_code)
+		if main_node: main_node.is_chatting = false
 
-func parse_and_animate(text: String):
-	var clean_text = text
-	var emotion = "Idle" 
+func parse_and_animate(full_response: String):
+	var clean_text = full_response
+	var found_anim = "Idle_Talk" 
 	
-	var tags = {
-		"[WORK]": "Salute",
-		"[HAPPY]": "JoyfulJump",
-		"[ANGRY]": "Angry",
-		"[WAVE]": "Waving",
-		"[DANCE]": "HipHopDancing",
-		"[TIRED]": "Yawn",
-		"[IDLE]": "Idle"
-	}
+	var regex = RegEx.new()
+	regex.compile("\\[(.*?)\\]") 
+	var match = regex.search(full_response)
 	
-	# Improved Parser: Finds the tag, plays animation, removes tag from text
-	for tag in tags:
-		if text.contains(tag): # 'contains' is safer than 'in' for some string types
-			emotion = tags[tag]
-			clean_text = text.replace(tag, "") # Remove the tag
-			break
+	if match:
+		var tag = match.get_string()
+		if tag in anim_map:
+			found_anim = anim_map[tag]
+		# Clean the text
+		clean_text = full_response.replace(tag, "").strip_edges()
 	
-	# If the AI forgot to write text and only sent "[TAG]", handle it gracefully
-	if clean_text.strip_edges() == "":
-		clean_text = "..." # Or some default "I'm listening" text
+	# Fail-safe: If model forgets tag, still show text
+	if clean_text == "": clean_text = full_response
+
+	output_label.text = "Lia: " + clean_text
 	
-	output_label.text = "Lia: " + clean_text.strip_edges()
-	
-	if emotion == "Hide":
-		var main_node = get_tree().current_scene
-		if main_node.has_method("force_hide"):
-			main_node.force_hide()
-	
-	elif animator and animator.has_animation(emotion):
-		# TELL MAIN WE ARE CHATTING
-		var main_node = get_tree().current_scene
-		if "is_chatting" in main_node:
-			main_node.is_chatting = true
-			
-		if animator.current_animation != emotion:
-			animator.play(emotion)
+	if found_anim == "Hide":
+		if main_node.has_method("force_hide"): main_node.force_hide()
+	elif animator:
+		animator.play(found_anim, 0.2)
