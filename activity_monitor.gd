@@ -1,33 +1,54 @@
+class_name ActivityMonitor
 extends Node
 
-# SIGNALS
-signal user_is_working # High APM/Typing
-signal user_is_bored   # No input for X seconds
-signal user_is_active  # Input detected
+# --- SIGNALS ---
+signal user_is_active  # Fired once when user wakes up
+signal user_is_bored   # Fired once when user goes idle
+signal user_is_working # Fired repeatedly while typing fast
 
-# PROPERTIES (This fixes your error)
-var is_user_active = false
-var last_input_time = 0.0
-var time_since_input = 0.0
+# --- SETTINGS (Editable in Inspector) ---
+@export var idle_threshold: float = 30.0 # Seconds of no input to be "Bored"
+@export var work_threshold: int = 5      # Keystrokes per second to be "Working"
 
-# THRESHOLDS
-var idle_threshold = 5.0 # Seconds before considered "Idle"
+# --- STATE ---
+var is_user_active: bool = true
+var last_input_time: float = 0.0
+var keystrokes: int = 0
+var last_kps_check: float = 0.0
+
+func _ready():
+	last_input_time = Time.get_ticks_msec() / 1000.0
+	set_process_input(true)
 
 func _input(event):
-	# Detect any mouse or key press
+	# 1. DETECT ACTIVITY
 	if event is InputEventMouseMotion or event is InputEventKey or event is InputEventMouseButton:
 		last_input_time = Time.get_ticks_msec() / 1000.0
 		
-		# If we were previously idle, signal that we are active now
+		# Transition: Idle -> Active
 		if not is_user_active:
 			is_user_active = true
+			print("Monitor: User Active")
 			emit_signal("user_is_active")
 
+		# 2. DETECT TYPING (For "Working" logic)
+		if event is InputEventKey and event.pressed and not event.echo:
+			keystrokes += 1
+
 func _process(delta):
-	var current_time = Time.get_ticks_msec() / 1000.0
-	time_since_input = current_time - last_input_time
+	var time = Time.get_ticks_msec() / 1000.0
 	
-	# Check if user has gone idle
-	if time_since_input > idle_threshold and is_user_active:
+	# CHECK 1: IDLE TIMEOUT
+	if is_user_active and (time - last_input_time) > idle_threshold:
 		is_user_active = false
+		print("Monitor: User Bored/Idle")
 		emit_signal("user_is_bored")
+
+	# CHECK 2: WORK INTENSITY (Check every 1 second)
+	if (time - last_kps_check) > 1.0:
+		if keystrokes >= work_threshold:
+			emit_signal("user_is_working")
+		
+		# Reset for next second
+		keystrokes = 0
+		last_kps_check = time

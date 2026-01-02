@@ -1,5 +1,9 @@
 extends Control
 
+# --- SIGNALS ---
+signal chat_started # Tells Main to lock the body
+signal chat_ended   # Tells Main to unlock (on errors)
+
 const OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 const MODEL_NAME = "lia-v3"
 
@@ -13,17 +17,15 @@ var main_node: Node
 var is_setup_mode = false 
 
 var anim_map = {
-	# ... (Your existing tags) ...
 	"[JUMP]":              "JoyfulJump",
 	"[WAVE]":              "Waving",
 	"[KISS]":              "Kiss",
 	"[DANCE_HIP]":         "HipHopDancing",
 	"[DANCE_JAZZ]":        "JazzDancing",
 	"[DANCE_RUMBA]":       "RumbaDancing",
-	"[RUMBA]":             "RumbaDancing", # <--- NEW FIX: Added the shortcut tag
+	"[RUMBA]":             "RumbaDancing", 
 	"[HIPHOP]":            "HipHopDancing", # Safety alias
 	"[JAZZ]":              "JazzDancing",   # Safety alias
-	
 	"[LAY]":               "FemaleLayingPose",
 	"[SIT_CHILL]":         "SittingIdle",
 	"[SIT_FOCUS]":         "Sitting1",
@@ -38,7 +40,6 @@ var anim_map = {
 	"[YAWN]":              "Yawn",
 	"[TALK]":              "Talking",
 	"[QUESTION]":          "AskingQuestion",
-	
 	"[CRYING]":            "anime_essential_2/mixamo_com", 
 	"[SADIDLE]":           "anime_essential_2/SadIdle",
 	"[SADWALK]":           "anime_essential_2/SadWalk"
@@ -67,9 +68,9 @@ func _on_text_submitted(new_text: String):
 		output_label.text = "Lia: Nice to meet you, " + new_text + "!"
 		is_setup_mode = false
 		return
+		
+	emit_signal("chat_started")
 
-	# CONFLICT MANAGER: Lock main script
-	if main_node: main_node.is_chatting = true
 	if animator and animator.has_animation("Talking"): 
 		animator.play("Talking") # Default loop while thinking
 	
@@ -132,14 +133,12 @@ func _on_text_submitted(new_text: String):
 	http.request(OLLAMA_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(data))
 	
 # --- PROACTIVE MODE ---
-func generate_proactive_response(instruction: String):
+func request_proactive_speech(system_instruction: String):
 	# If the user is currently typing, ABORT. Don't be annoying.
 	if input_field.has_focus() or input_field.text != "":
 		return
 
-	# Lock the body so she stops roaming
-	if main_node: main_node.is_chatting = true
-	if animator: animator.play("PushUp") 
+	emit_signal("chat_started")
 	
 	# Contextual Prompt
 	var user_name = Memory.context_data["user_name"]
@@ -187,7 +186,7 @@ func generate_proactive_response(instruction: String):
     Example: [SIT_FOCUS] I am listening.
 	
     3. Keep it short (1 sentence).
-	""" % [user_name, instruction]
+	""" % [user_name, system_instruction]
 	var data = {
 		"model": MODEL_NAME,
 		"prompt": "...", # Empty prompt triggers the system instruction
@@ -205,7 +204,7 @@ func _on_request_completed(result, response_code, headers, body):
 		parse_and_animate(raw_response)
 	else:
 		output_label.text = "Lia: Brain Disconnected (Ollama Error)."
-		if main_node: main_node.is_chatting = false
+		emit_signal("chat_ended")
 
 func parse_and_animate(full_response: String):
 	print("AI RAW: ", full_response)
@@ -236,3 +235,4 @@ func parse_and_animate(full_response: String):
 			animator.play(found_anim)
 		else:
 			print("Lia Error: Animation missing -> ", found_anim)
+			animator.play("Talking")
