@@ -1,45 +1,33 @@
 extends Node
 
-signal user_is_working
-signal user_is_bored
-signal user_is_active
+# SIGNALS
+signal user_is_working # High APM/Typing
+signal user_is_bored   # No input for X seconds
+signal user_is_active  # Input detected
 
-var last_mouse_pos = Vector2()
-var idle_time = 0.0
+# PROPERTIES (This fixes your error)
+var is_user_active = false
+var last_input_time = 0.0
+var time_since_input = 0.0
 
-# Thresholds
-const WORK_THRESHOLD = 5.0 
-const BORED_THRESHOLD = 30.0 
+# THRESHOLDS
+var idle_threshold = 5.0 # Seconds before considered "Idle"
 
-# Track current state to prevent spamming signals
-enum ActivityState { ACTIVE, WORKING, BORED }
-var current_state = ActivityState.ACTIVE
+func _input(event):
+	# Detect any mouse or key press
+	if event is InputEventMouseMotion or event is InputEventKey or event is InputEventMouseButton:
+		last_input_time = Time.get_ticks_msec() / 1000.0
+		
+		# If we were previously idle, signal that we are active now
+		if not is_user_active:
+			is_user_active = true
+			emit_signal("user_is_active")
 
 func _process(delta):
-	var current_mouse_pos = DisplayServer.mouse_get_position()
-	var distance = current_mouse_pos.distance_to(last_mouse_pos)
+	var current_time = Time.get_ticks_msec() / 1000.0
+	time_since_input = current_time - last_input_time
 	
-	if distance < 5.0:
-		idle_time += delta
-	else:
-		idle_time = 0.0 # Reset immediately on movement
-		if current_state != ActivityState.ACTIVE:
-			_set_state(ActivityState.ACTIVE)
-
-	last_mouse_pos = current_mouse_pos
-	
-	# Logic: Deduce User State
-	if idle_time > BORED_THRESHOLD:
-		if current_state != ActivityState.BORED:
-			_set_state(ActivityState.BORED)
-			
-	elif idle_time > WORK_THRESHOLD:
-		if current_state != ActivityState.WORKING:
-			_set_state(ActivityState.WORKING)
-
-func _set_state(new_state):
-	current_state = new_state
-	match new_state:
-		ActivityState.ACTIVE: emit_signal("user_is_active")
-		ActivityState.WORKING: emit_signal("user_is_working")
-		ActivityState.BORED: emit_signal("user_is_bored")
+	# Check if user has gone idle
+	if time_since_input > idle_threshold and is_user_active:
+		is_user_active = false
+		emit_signal("user_is_bored")

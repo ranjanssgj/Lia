@@ -130,6 +130,72 @@ func _on_text_submitted(new_text: String):
 	
 	var headers = ["Content-Type: application/json"]
 	http.request(OLLAMA_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(data))
+	
+# --- PROACTIVE MODE ---
+func generate_proactive_response(instruction: String):
+	# If the user is currently typing, ABORT. Don't be annoying.
+	if input_field.has_focus() or input_field.text != "":
+		return
+
+	# Lock the body so she stops roaming
+	if main_node: main_node.is_chatting = true
+	if animator: animator.play("PushUp") 
+	
+	# Contextual Prompt
+	var user_name = Memory.context_data["user_name"]
+	var system_prompt = """You are Lia, the user's close friend and desktop assistant.
+    User: %s.
+    CURRENT SCENARIO: %s
+    INSTRUCTIONS:
+    1. Be proactive. YOU are starting this conversation.
+    2. Start the response with the matching tag from this list:
+    
+    -- HAPPY / EXCITED --
+    [JUMP] - Success, big news, excitement.
+    [DANCE_HIP] - Celebration, partying, winning.
+    [DANCE_JAZZ] - Playful, music, fun.
+    [DANCE_RUMBA] - Elegant, sweet, charming.
+    
+    -- AFFECTIONATE --
+    [KISS] - Love, gratitude, comforting the user.
+    [WAVE] - Hello, goodbye, welcoming.
+    
+    -- RELAXED / PASSIVE --
+    [LAY] - Tired, watching movies, chilling.
+    [SIT_CHILL] - Casual chat, listening, waiting.
+    [YAWN] - Sleepy, late night, bored.
+    [HANG] - Idling, waiting for download.
+    
+    -- WORK / SERIOUS --
+    [SIT_FOCUS] - Working, studying, deep thought.
+    [SALUTE] - Acknowledging orders, "Yes Commander", starting tasks.
+    [PRAY] - Hoping, wishing for luck, nervous.
+    
+    -- NEGATIVE --
+    [ANGRY] - Scolding, annoyed, defending yourself.
+    [SHOCK] - Surprised, confused, sudden news.
+    [CRYING] - Sad news, heartbreak, grief.
+    [SADIDLE] - Gloomy, bad day, low energy.
+    [SADWALK] - Leaving, wanting space, depression.
+    
+    -- ACTION --
+    [RUN] - Late, hurry, emergency.
+    [WORKOUT_ABS] - Gym, exercise, motivation.
+    [HIDE] - Scared, user needs privacy.
+    
+    Example: [WAVE] Hello!
+    Example: [SIT_FOCUS] I am listening.
+	
+    3. Keep it short (1 sentence).
+	""" % [user_name, instruction]
+	var data = {
+		"model": MODEL_NAME,
+		"prompt": "...", # Empty prompt triggers the system instruction
+		"system": system_prompt,
+		"stream": false
+	}
+	var headers = ["Content-Type: application/json"]
+	http.request(OLLAMA_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(data))
 
 func _on_request_completed(result, response_code, headers, body):
 	input_field.editable = true
