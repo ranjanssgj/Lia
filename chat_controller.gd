@@ -1,33 +1,50 @@
 extends Control
 
 const OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-const MODEL_NAME = "lia-v3" 
+const MODEL_NAME = "lia-v3"
 
 @onready var output_label = $PanelContainer/VBoxContainer/RichTextLabel
 @onready var input_field = $PanelContainer/VBoxContainer/LineEdit
 @onready var http = $OllamaRequest
-@onready var main_node = get_tree().current_scene 
 
-var animator: AnimationPlayer
+# --- DEPENDENCY INJECTION (Assigned by main.gd) ---
+var animator: AnimationPlayer 
+var main_node: Node 
 var is_setup_mode = false 
 
-# --- ANIMATION MAP ---
 var anim_map = {
-	"[JUMP]": "Jump", "[WAVE]": "Wave", "[KISS]": "Kiss",
-	"[DANCE_HIP]": "Dance_Hip", "[DANCE_JAZZ]": "Dance_Jazz", 
-	"[DANCE_RUMBA]": "Dance_Rumba", "[LAY]": "Lay_Down", 
-	"[SIT_CHILL]": "Sit_Chill", "[SIT_FOCUS]": "Sit_Focus", 
-	"[PRAY]": "Pray", "[SALUTE]": "Salute", "[SHOCK]": "Shock", 
-	"[ANGRY]": "Angry", "[RUN]": "Run", "[WORKOUT_ABS]": "Workout_Abs", 
-	"[HANG]": "Hang", "[HIDE]": "Hide", "[YAWN]": "Yawn",
-	"[CRYING]": "Crying", "[SADIDLE]": "Sad_Idle", "[SADWALK]": "Sad_Walk",
-	"[TALK]": "Idle_Talk" 
+	# ... (Your existing tags) ...
+	"[JUMP]":              "JoyfulJump",
+	"[WAVE]":              "Waving",
+	"[KISS]":              "Kiss",
+	"[DANCE_HIP]":         "HipHopDancing",
+	"[DANCE_JAZZ]":        "JazzDancing",
+	"[DANCE_RUMBA]":       "RumbaDancing",
+	"[RUMBA]":             "RumbaDancing", # <--- NEW FIX: Added the shortcut tag
+	"[HIPHOP]":            "HipHopDancing", # Safety alias
+	"[JAZZ]":              "JazzDancing",   # Safety alias
+	
+	"[LAY]":               "FemaleLayingPose",
+	"[SIT_CHILL]":         "SittingIdle",
+	"[SIT_FOCUS]":         "Sitting1",
+	"[PRAY]":              "Praying",
+	"[SALUTE]":            "Salute",
+	"[SHOCK]":             "Surprised",
+	"[ANGRY]":             "Angry",
+	"[RUN]":               "TreadmillRunning",
+	"[WORKOUT_ABS]":       "Situps",
+	"[HANG]":              "HangingIdle",
+	"[HIDE]":              "Hide", 
+	"[YAWN]":              "Yawn",
+	"[TALK]":              "Talking",
+	"[QUESTION]":          "AskingQuestion",
+	
+	"[CRYING]":            "anime_essential_2/mixamo_com", 
+	"[SADIDLE]":           "anime_essential_2/SadIdle",
+	"[SADWALK]":           "anime_essential_2/SadWalk"
 }
 
 func _ready():
-	if owner: animator = owner.find_child("AnimationPlayer", true, false)
-	if not animator: animator = get_tree().root.find_child("AnimationPlayer", true, false)
-
 	input_field.text_submitted.connect(_on_text_submitted)
 	http.request_completed.connect(_on_request_completed)
 	
@@ -44,7 +61,6 @@ func _on_text_submitted(new_text: String):
 	if new_text.strip_edges() == "": return
 	input_field.clear()
 	
-	# --- SETUP MODE ---
 	if is_setup_mode:
 		Memory.context_data["user_name"] = new_text.strip_edges()
 		Memory.save_memory()
@@ -52,28 +68,63 @@ func _on_text_submitted(new_text: String):
 		is_setup_mode = false
 		return
 
-	# --- CHAT MODE ---
+	# CONFLICT MANAGER: Lock main script
 	if main_node: main_node.is_chatting = true
-	if animator: animator.play("Thinking") 
+	if animator and animator.has_animation("Talking"): 
+		animator.play("Talking") # Default loop while thinking
 	
 	output_label.text = "You: " + new_text + "\n..."
 	input_field.editable = false
 	
-	# --- SYSTEM PROMPT INJECTION (The Fix) ---
-	# Even though the model is fine-tuned, we force the format via API to be safe.
+	# SYSTEM PROMPT (Reinforcement)
 	var user_name = Memory.context_data["user_name"]
-	var system_prompt = """You are Lia, a loving desktop assistant.
-    User Name: %s
+	var system_prompt = """You are Lia, a loving desktop assistant. User: %s.
+    
     INSTRUCTIONS:
-    1. Start EVERY response with one of these tags: [JUMP], [WAVE], [KISS], [DANCE_HIP], [DANCE_JAZZ], [DANCE_RUMBA], [LAY], [SIT_CHILL], [SIT_FOCUS], [PRAY], [SALUTE], [SHOCK], [ANGRY], [RUN], [WORKOUT_ABS], [HANG], [HIDE], [YAWN], [CRYING], [SADIDLE], [SADWALK].
-    2. Example: [WAVE] Hello there!
-    3. Do not output anything else before the tag.
+    1. Analyze the EMOTION of your reply.
+    2. Start the response with the matching tag from this list:
+    
+    -- HAPPY / EXCITED --
+    [JUMP] - Success, big news, excitement.
+    [DANCE_HIP] - Celebration, partying, winning.
+    [DANCE_JAZZ] - Playful, music, fun.
+    [DANCE_RUMBA] - Elegant, sweet, charming.
+    
+    -- AFFECTIONATE --
+    [KISS] - Love, gratitude, comforting the user.
+    [WAVE] - Hello, goodbye, welcoming.
+    
+    -- RELAXED / PASSIVE --
+    [LAY] - Tired, watching movies, chilling.
+    [SIT_CHILL] - Casual chat, listening, waiting.
+    [YAWN] - Sleepy, late night, bored.
+    [HANG] - Idling, waiting for download.
+    
+    -- WORK / SERIOUS --
+    [SIT_FOCUS] - Working, studying, deep thought.
+    [SALUTE] - Acknowledging orders, "Yes Commander", starting tasks.
+    [PRAY] - Hoping, wishing for luck, nervous.
+    
+    -- NEGATIVE --
+    [ANGRY] - Scolding, annoyed, defending yourself.
+    [SHOCK] - Surprised, confused, sudden news.
+    [CRYING] - Sad news, heartbreak, grief.
+    [SADIDLE] - Gloomy, bad day, low energy.
+    [SADWALK] - Leaving, wanting space, depression.
+    
+    -- ACTION --
+    [RUN] - Late, hurry, emergency.
+    [WORKOUT_ABS] - Gym, exercise, motivation.
+    [HIDE] - Scared, user needs privacy.
+    
+    Example: [WAVE] Hello!
+    Example: [SIT_FOCUS] I am listening.
 	""" % user_name
 	
 	var data = {
 		"model": MODEL_NAME,
 		"prompt": new_text,
-		"system": system_prompt, # <--- Explicitly sending instructions again
+		"system": system_prompt,
 		"stream": false 
 	}
 	
@@ -82,19 +133,18 @@ func _on_text_submitted(new_text: String):
 
 func _on_request_completed(result, response_code, headers, body):
 	input_field.editable = true
-	
 	if response_code == 200:
 		var json = JSON.parse_string(body.get_string_from_utf8())
 		var raw_response = json["response"]
 		parse_and_animate(raw_response)
 	else:
-		output_label.text = "Lia: Error connecting to Brain (Ollama)."
-		print("Ollama Error: ", response_code)
+		output_label.text = "Lia: Brain Disconnected (Ollama Error)."
 		if main_node: main_node.is_chatting = false
 
 func parse_and_animate(full_response: String):
+	print("AI RAW: ", full_response)
 	var clean_text = full_response
-	var found_anim = "Idle_Talk" 
+	var found_anim
 	
 	var regex = RegEx.new()
 	regex.compile("\\[(.*?)\\]") 
@@ -104,15 +154,19 @@ func parse_and_animate(full_response: String):
 		var tag = match.get_string()
 		if tag in anim_map:
 			found_anim = anim_map[tag]
-		# Clean the text
 		clean_text = full_response.replace(tag, "").strip_edges()
 	
-	# Fail-safe: If model forgets tag, still show text
 	if clean_text == "": clean_text = full_response
-
 	output_label.text = "Lia: " + clean_text
 	
+	# PLAY ANIMATION
 	if found_anim == "Hide":
 		if main_node.has_method("force_hide"): main_node.force_hide()
 	elif animator:
-		animator.play(found_anim, 0.2)
+		# Check if animation exists to prevent crash
+		if found_anim == null: 
+			found_anim = "Talking"
+		if animator.has_animation(found_anim):
+			animator.play(found_anim)
+		else:
+			print("Lia Error: Animation missing -> ", found_anim)
