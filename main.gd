@@ -27,7 +27,7 @@ var screen_size = Vector2i()
 var is_dragging = false
 var drag_offset = Vector2i()
 var is_chatting = false 
-
+var last_salute_time: float = -300.0
 var idle_timer = 0.0
 var time_until_bored = 8.0 
 var idle_variations = ["Idle", "Yawn", "HangingIdle", "SittingIdle", "FemaleLayingPose"]
@@ -140,10 +140,14 @@ func _on_brain_tick():
 
 
 func _on_user_working():
-	if is_chatting: return 
+	if is_chatting: return
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if (current_time - last_salute_time) < 300.0:
+		return
 	if animator.current_animation != "Salute":
 		print("Lia: User working. Saluting.")
 		animator.play("Salute")
+		last_salute_time = current_time # Reset the timer
 
 func _on_user_bored():
 	if is_chatting: return
