@@ -1,4 +1,4 @@
-[gd_scene load_steps=39 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=41 format=3 uid="uid://co5lmcplhwff"]
 
 [ext_resource type="Script" uid="uid://dgpuscn53fv15" path="res://activity_monitor.gd" id="1_1bvp3"]
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
@@ -7,6 +7,8 @@
 [ext_resource type="Script" uid="uid://bqu23xoq7sowq" path="res://chat_controller.gd" id="4_1bvp3"]
 [ext_resource type="AnimationLibrary" uid="uid://b56h8o8sxkgti" path="res://assets/animations/anime_essential_2.glb" id="5_7mycd"]
 [ext_resource type="Script" uid="uid://t0dptwicg2gq" path="res://ProactiveModule.gd" id="7_272bh"]
+[ext_resource type="Script" uid="uid://cp8quwdpfp0ne" path="res://VoiceReceiver.gd" id="8_5vw27"]
+[ext_resource type="Script" uid="uid://cam0pk5iirh53" path="res://LifecycleManager.gd" id="9_kek77"]
 
 [sub_resource type="Animation" id="Animation_kfrp8"]
 resource_name = "Angry"
@@ -11766,6 +11768,12 @@ script = ExtResource("1_1bvp3")
 
 [node name="ProactiveModule" type="Node" parent="."]
 script = ExtResource("7_272bh")
+
+[node name="VoiceReceiver" type="Node" parent="."]
+script = ExtResource("8_5vw27")
+
+[node name="LifecycleManager" type="Node" parent="."]
+script = ExtResource("9_kek77")
 
 [editable path="Lia"]
 [editable path="Lia/Node/Armature/Skeleton3D/Face/ChatBubble"]

@@ -17,6 +17,9 @@ var main_node: Node
 var is_setup_mode = false 
 var conversation_history: Array = [] 
 const MAX_HISTORY_LIMIT = 10
+var udp_sender = PacketPeerUDP.new()
+const PYTHON_TTS_PORT = 4243
+const PYTHON_IP = "127.0.0.1"
 const CORE_SYSTEM_PROMPT = """You are Lia, a cheerful loving partner.
     
     INSTRUCTIONS:
@@ -41,7 +44,7 @@ const CORE_SYSTEM_PROMPT = """You are Lia, a cheerful loving partner.
     
     -- WORK / SERIOUS --
     [SIT_FOCUS] - Working, studying, deep thought.
-    [SALUTE] - Acknowledging orders, "Yes Commander", starting tasks.
+	[SALUTE] - Acknowledging orders, "Yes Commander", starting tasks.
     [PRAY] - Hoping, wishing for luck, nervous.
     
     -- NEGATIVE --
@@ -100,6 +103,7 @@ func _ready():
 		output_label.text = "Lia: Welcome back, " + Memory.context_data["user_name"] + "!"
 	if "chat_log" in Memory.context_data:
 		conversation_history = Memory.context_data["chat_log"]
+	udp_sender.set_dest_address(PYTHON_IP, PYTHON_TTS_PORT)
 
 func start_setup_mode():
 	is_setup_mode = true
@@ -146,22 +150,22 @@ func request_proactive_speech(system_instruction: String):
 	emit_signal("chat_started")
 	
 	# Contextual Prompt
-	var user_name = Memory.context_data["user_name"]
-	var history = get_history_string()
 	var pro_prompt = """
-    [SYSTEM EVENT]: %s
-    
-    TASK:
-    - Respond to the User immediately.
-    - Be warm and natural.
-    - START with a valid tag (e.g. [WAVE], [JUMP]).
-    - Keep it short (under 15 words).
+	[SYSTEM EVENT]: %s
+	
+	INSTRUCTIONS:
+	- This is a System event, meaning messages were based on system data
+	- Respond to the User immediately.
+	- Be warm and natural.
+	- START with a valid tag from this list - ['[JUMP]', '[WAVE]', '[KISS]', '[DANCE_HIP]', '[DANCE_JAZZ]', '[DANCE_RUMBA]', '[RUMBA]', '[HIPHOP]', '[JAZZ]', '[LAY]', '[SIT_CHILL]', '[SIT_FOCUS]', '[PRAY]', '[SALUTE]', '[SHOCK]', '[ANGRY]', '[RUN]', '[WORKOUT_ABS]', '[HANG]', '[HIDE]', '[YAWN]', '[TALK]', '[QUESTION]', '[CRYING]', '[SADIDLE]', '[SADWALK]'].
+	- Keep it short (under 15 words).
 	""" % system_instruction
+	
 	
 	var data = {
 		"model": MODEL_NAME,
-		"prompt": pro_prompt,
-		"system": CORE_SYSTEM_PROMPT,
+		"prompt": "...",
+		"system": pro_prompt,
 		"stream": false
 	}
 	var headers = ["Content-Type: application/json"]
@@ -193,11 +197,13 @@ func parse_and_animate(full_response: String):
 			
 		# Remove tag from the visible text
 		clean_text = clean_text.replace(tag, "")
-	
+
 	# 2. UPDATE UI & MEMORY
 	clean_text = clean_text.strip_edges()
 	if clean_text == "": clean_text = "..." # Fallback if message was only tags
 	output_label.text = "Lia: " + clean_text
+	var packet = clean_text.to_utf8_buffer()
+	udp_sender.put_packet(packet)
 	conversation_history.append({"role": "Lia", "text": clean_text}) # Save clean text to memory
 	if conversation_history.size() > MAX_HISTORY_LIMIT:
 		conversation_history.pop_front()
@@ -206,21 +212,7 @@ func parse_and_animate(full_response: String):
 	
 	# 3. PLAY ANIMATION QUEUE
 	if animator:
-		if found_animations.is_empty():
-			if animator.has_animation("Talking"):
-				animator.play("Talking")
-		else:
-			var first_anim = found_animations.pop_front()
-			_play_or_hide(first_anim)
-			
-			# Queue the REST to play after the first one finishes
-			for anim_name in found_animations:
-				if anim_name == "Hide":
-					 # Hide is special, we can't really queue the function call easily
-					 # so we just run it immediately if encountered
-					if main_node and main_node.has_method("force_hide"): main_node.force_hide()
-				elif animator.has_animation(anim_name):
-					animator.queue(anim_name)
+		_play_smooth_sequence(found_animations)
 
 # Helper to handle the specific "Hide" logic vs normal animations
 func _play_or_hide(anim_name: String):
@@ -238,3 +230,21 @@ func get_history_string() -> String:
 	for msg in conversation_history:
 		history_str += msg["role"] + ": " + msg["text"] + "\n"
 	return history_str
+	
+func _play_smooth_sequence(anim_list: Array):
+	if anim_list.is_empty():
+		animator.play("Talking", 0.2)
+		return
+
+	# Loop through animations and blend them manually
+	for anim_name in anim_list:
+		if anim_name == "Hide":
+			if main_node and main_node.has_method("force_hide"): main_node.force_hide()
+		elif animator.has_animation(anim_name):
+			animator.play(anim_name, 0.2)
+			var length = animator.get_animation(anim_name).length
+			var wait_time = max(0.1, length - 0.2) # Don't wait negative time
+			await get_tree().create_timer(wait_time).timeout
+		else:
+			animator.play("Talking", 0.2)
+	emit_signal("chat_ended")

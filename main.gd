@@ -63,6 +63,8 @@ func _ready():
 		activity_monitor.user_is_active.connect(_on_user_active)
 	
 	animator.animation_finished.connect(_on_animation_finished)
+	if animator:
+		animator.playback_default_blend_time = 0.2
 
 func _process(delta):
 	if Input.is_action_just_pressed("ui_cancel"): get_tree().quit()
@@ -146,7 +148,7 @@ func _on_user_working():
 		return
 	if animator.current_animation != "Salute":
 		print("Lia: User working. Saluting.")
-		animator.play("Salute")
+		animator.play("Salute", 0.5)
 		last_salute_time = current_time # Reset the timer
 
 func _on_user_bored():
@@ -178,11 +180,11 @@ func pick_random_spot():
 func change_state(new_state):
 	current_state = new_state
 	match new_state:
-		State.IDLE: animator.play("Idle")
-		State.ROAMING: animator.play("mixamo_com")
+		State.IDLE: animator.play("Idle", 0.2)
+		State.ROAMING: animator.play("mixamo_com", 0.2)
 		State.HIDING: 
-			if animator.has_animation("Hide"): animator.play("Hide")
-			else: animator.play("Idle")
+			if animator.has_animation("Hide"): animator.play("Hide", 0.3)
+			else: animator.play("Idle", 0.2)
 
 func force_hide():
 	screen_size = DisplayServer.screen_get_size()

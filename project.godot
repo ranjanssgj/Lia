@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+LifecycleManager="*res://LifecycleManager.gd"
 Memory="*res://memory_manager.gd"
 
 [display]

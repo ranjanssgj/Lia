@@ -15,18 +15,19 @@ var silence_duration = 0.0 # Time since LIA last spoke
 var user_idle_duration = 0.0 # Time since USER last moved
 var has_greeted_morning = false
 var has_greeted_night = false
+var is_waiting_for_response = false
 
 func _ready():
 	# 1. WAIT FOR SYSTEMS TO BOOT
 	await get_tree().create_timer(2.0).timeout
-	
+	if chat_controller:
+		if not chat_controller.is_connected("chat_ended", _on_chat_ended):
+			chat_controller.chat_ended.connect(_on_chat_ended)
 	# 2. CONNECT TO SENSES (Event-Driven!)
 	if activity_monitor:
-		# If user starts typing fast, react!
-		if activity_monitor.has_signal("user_is_working"):
+		if not activity_monitor.is_connected("user_is_working", _on_user_working_hard):
 			activity_monitor.user_is_working.connect(_on_user_working_hard)
-		# If user comes back after being away
-		if activity_monitor.has_signal("user_is_active"):
+		if not activity_monitor.is_connected("user_is_active", _on_user_returned):
 			activity_monitor.user_is_active.connect(_on_user_returned)
 	
 	# 3. START THE "INTERNAL CLOCK"
@@ -37,7 +38,7 @@ func _ready():
 	add_child(timer)
 	
 	# 4. IMMEDIATE WELCOME
-	_trigger("System startup. Give a warm, energetic welcome to your best friend.")
+	_trigger("System startup. Give a warm welcome.")
 
 func _process(delta):
 	if speech_cooldown > 0: speech_cooldown -= delta
@@ -49,7 +50,9 @@ func _process(delta):
 	else:
 		user_idle_duration = 0.0
 
-# --- THE TRIGGERS ---
+func _on_chat_ended():
+	is_waiting_for_response = false
+	silence_duration = 0.0
 
 # 1. EVENT: User is typing furiously
 func _on_user_working_hard():
@@ -108,6 +111,7 @@ func _on_vibe_check():
 # --- HELPER ---
 func _trigger(instruction: String):
 	print("PROACTIVE TRIGGER: ", instruction)
+	is_waiting_for_response = true
 	silence_duration = 0.0
 	# Don't speak again for 45 seconds to let the user breathe
 	speech_cooldown = 45.0 
