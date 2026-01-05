@@ -1,20 +1,37 @@
-import speech_recognition as sr
+import os
+import sys
 import socket
 import threading
 import asyncio
 import edge_tts
-import os
-import sys
 import platform
-import subprocess # <--- NEW: For safe external playback
+import subprocess
+import tempfile
+import time
+import speech_recognition as sr
+from groq import Groq
+from dotenv import load_dotenv
 
 # --- CONFIG ---
+load_dotenv()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    print("Error: GROQ_API_KEY not found in .env")
+    # Fallback for testing if .env fails
+    # GROQ_API_KEY = "gsk_..." 
+
 GODOT_IP = "127.0.0.1"
-SEND_PORT = 4242    # Python -> Godot (User Voice)
-RECEIVE_PORT = 4243 # Godot -> Python (Lia Voice)
-VOICE_NAME = "en-US-AnaNeural" 
+SEND_PORT = 4242
+RECEIVE_PORT = 4243
+VOICE_NAME = "en-US-AnaNeural"
+
+# --- GLOBAL STATE ---
+is_ai_speaking = False
+is_user_typing = False
 
 # --- SETUP ---
+client = Groq(api_key=GROQ_API_KEY)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 receiver_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -26,99 +43,133 @@ except OSError:
 
 recognizer = sr.Recognizer()
 IS_WINDOWS = platform.system() == "Windows"
-print(f"--- LIA AUDIO SERVER ({platform.system()}) ---")
+print(f"--- LIA AUDIO SERVER (Smart Pause Enabled) ---")
 
-# --- FUNCTION: ROBUST PLAYBACK (NO CRASHES) ---
+# --- PLAYBACK ---
 def play_audio_cross_platform(file_path):
     if IS_WINDOWS:
-        # Windows usually handles pydub fine, but we can use ffplay here too if needed
         try:
             from pydub import AudioSegment
             from pydub.playback import play
             audio = AudioSegment.from_file(file_path)
-            play(audio)
+            play(audio) # This blocks until audio finishes
         except Exception as e:
             print(f"Windows Audio Error: {e}")
     else:
-        # LINUX FIX: Use external FFplay to prevent SegFaults
-        # -nodisp: No window
-        # -autoexit: Close after playing
-        # -v 0: Silence log output
         try:
-            subprocess.run(
-                ["ffplay", "-nodisp", "-autoexit", "-v", "0", file_path],
-                check=True
-            )
+            # Linux ffplay (blocks until finish)
+            subprocess.run(["ffplay", "-nodisp", "-autoexit", "-v", "0", file_path], check=True)
         except Exception as e:
             print(f"Linux Audio Error: {e}")
-            print("Make sure ffmpeg is installed: sudo pacman -S ffmpeg")
 
-# --- FUNCTION: SPEAKING (TTS) ---
+# --- TTS (THE MOUTH) ---
 async def generate_and_play_tts(text):
+    global is_ai_speaking
     print(f"Lia: {text}")
-    output_file = "lia_voice.mp3"
     
+    # 1. LOCK THE MIC
+    is_ai_speaking = True 
+    
+    output_file = "lia_voice.mp3"
     try:
         communicate = edge_tts.Communicate(text, VOICE_NAME)
         await communicate.save(output_file)
         play_audio_cross_platform(output_file)
     except Exception as e:
-        print(f"TTS Generation Error: {e}")
+        print(f"TTS Error: {e}")
     
-    # Cleanup
+    # 2. UNLOCK THE MIC
+    is_ai_speaking = False 
+    
     if os.path.exists(output_file):
-        try:
-            os.remove(output_file)
-        except:
-            pass
+        try: os.remove(output_file)
+        except: pass
 
 def run_tts_listener():
-    print(f"2. TTS Listening on port {RECEIVE_PORT}...")
+    global is_user_typing
     while True:
         try:
             data, addr = receiver_sock.recvfrom(8192)
             text = data.decode("utf-8")
+            
             if text:
+                # --- COMMAND HANDLING ---
+                if text == "__SYS__PAUSE_MIC":
+                    is_user_typing = True
+                    print(">> Mic Paused (User is typing...)")
+                    continue
+                elif text == "__SYS__RESUME_MIC":
+                    is_user_typing = False
+                    print(">> Mic Resumed")
+                    continue
+                
+                # --- NORMAL TTS ---
                 asyncio.run(generate_and_play_tts(text))
+                
         except Exception as e:
             print(f"TTS Loop Error: {e}")
 
-# --- FUNCTION: LISTENING (STT) ---
+# --- STT (THE EARS) ---
+def transcribe_audio_groq(audio_data):
+    # Save temp file for Groq
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
+        temp_wav.write(audio_data.get_wav_data())
+        temp_filename = temp_wav.name
+
+    try:
+        with open(temp_filename, "rb") as file:
+            transcription = client.audio.transcriptions.create(
+                file=(temp_filename, file.read()),
+                model="whisper-large-v3",
+                response_format="json",
+                language="en"
+            )
+        return transcription.text
+    except Exception as e:
+        print(f"Groq STT Error: {e}")
+        return None
+    finally:
+        os.remove(temp_filename)
+
 def run_mic_listener():
-    # Attempt to find default mic
-    mic_index = None
-            
-    with sr.Microphone(device_index=mic_index) as source:
-        print("1. Calibrating Mic (1s)...")
+    with sr.Microphone() as source:
+        print("Calibrating Mic...")
         recognizer.adjust_for_ambient_noise(source, duration=1)
-        print("   -> Mic Ready! Speak now.")
+        print("Lia is listening...")
         
         while True:
+            # 1. STOP IF AI SPEAKING OR USER TYPING
+            if is_ai_speaking or is_user_typing:
+                time.sleep(0.5) 
+                continue
+            
             try:
-                audio = recognizer.listen(source, timeout=None, phrase_time_limit=None)
-                # print("   -> Hearing...") # Commented out to reduce spam
+                # 2. LISTEN (Short timeout to check flags frequently)
+                audio = recognizer.listen(source, timeout=1.0, phrase_time_limit=15)
                 
-                text = recognizer.recognize_google(audio)
-                if text:
+                print("Processing...")
+                text = transcribe_audio_groq(audio)
+                
+                # Double check typing flag before sending (in case user started typing while processing)
+                if is_user_typing: 
+                    print("Ignored voice (User started typing)")
+                    continue
+
+                if text and text.strip() != "":
                     print(f"User: {text}")
                     sock.sendto(text.encode(), (GODOT_IP, SEND_PORT))
+                    print("... (Cooldown 2s) ...")
+                    time.sleep(2.0)
                     
             except sr.WaitTimeoutError:
-                pass
-            except sr.UnknownValueError:
-                pass
+                continue 
             except Exception as e:
-                print(f"Mic Error: {e}")
-                break # Break to trigger restart in main loop
+                print(f"Mic Loop Error: {e}")
 
 if __name__ == "__main__":
-    # 1. Start TTS Thread
     tts_thread = threading.Thread(target=run_tts_listener)
     tts_thread.daemon = True
     tts_thread.start()
-
-    # 2. Main Loop with Auto-Restart
-    print("Lia Audio System: Online")
     
     while True:
         try:
@@ -126,4 +177,4 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             break
         except Exception as e:
-            print(f"Restarting Mic Listener: {e}")
+            print(f"Restarting: {e}")

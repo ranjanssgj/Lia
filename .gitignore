@@ -3,6 +3,8 @@
 /android/
 /ios/
 
+#secerts
+.env
 # Export builds
 /export/
 

@@ -25,7 +25,10 @@ func _process(delta):
 
 func _handle_voice_command(text: String):
 	if chat_controller:
-		# 1. Show text in input box briefly
+		
+		if chat_controller.input_field.has_focus() or chat_controller.input_field.text != "":
+			print("Lia: Voice ignored (User is typing)")
+			return
 		chat_controller.input_field.text = text
 		
 		# 2. Trigger the submit function manually
