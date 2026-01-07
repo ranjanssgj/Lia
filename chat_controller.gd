@@ -20,13 +20,14 @@ const MODEL_FALLBACK = "llama-3.1-8b-instant"   # Fast, generous limits
 # --- NODES & VARIABLES ---
 @onready var output_label = $PanelContainer/VBoxContainer/RichTextLabel
 @onready var input_field = $PanelContainer/VBoxContainer/LineEdit
+@onready var mode_toggle = $PanelContainer/VBoxContainer/ModeToggle
 @onready var http = $OllamaRequest
 
 var animator: AnimationPlayer
 var udp_sender = PacketPeerUDP.new()
 const PYTHON_TTS_PORT = 4243
 const PYTHON_IP = "127.0.0.1"
-
+var waiting_for_audio = false
 var is_setup_mode = false
 var conversation_history: Array = []
 const MAX_HISTORY_LIMIT = 15
@@ -95,16 +96,11 @@ func _ready():
 		if owner: animator = owner.find_child("AnimationPlayer", true, false)
 		if not animator: animator = get_tree().root.find_child("AnimationPlayer", true, false)
 	
-	if not input_field.text_submitted.is_connected(_on_text_submitted):
-		input_field.text_submitted.connect(_on_text_submitted)
-	
-	if not http.request_completed.is_connected(_on_request_completed):
-		http.request_completed.connect(_on_request_completed)
+	input_field.text_submitted.connect(_on_text_submitted)
+	http.request_completed.connect(_on_request_completed)
 
-	if not input_field.focus_entered.is_connected(_on_input_focus):
-		input_field.focus_entered.connect(_on_input_focus)
-	if not input_field.focus_exited.is_connected(_on_input_unfocus):
-		input_field.focus_exited.connect(_on_input_unfocus)
+	input_field.focus_entered.connect(_on_input_focus)
+	input_field.focus_exited.connect(_on_input_unfocus)
 	
 	udp_sender.set_dest_address(PYTHON_IP, PYTHON_TTS_PORT)
 	
@@ -142,6 +138,7 @@ func _load_env():
 	
 	print("Lia Error: Could not find .env file at ", env_path)
 
+
 func start_setup_mode():
 	is_setup_mode = true
 	output_label.text = "Lia: Hello! I don't know your name yet.\nWhat should I call you?"
@@ -168,6 +165,7 @@ func _on_text_submitted(new_text: String):
 	output_label.text = "You: " + new_text + "\n..."
 	
 	conversation_history.append({"role": "User", "text": new_text})
+	input_field.release_focus()
 	_send_sys_command("__SYS__RESUME_MIC")
 	if USE_GROQ:
 		_send_request_to_groq(new_text)
