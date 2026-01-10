@@ -148,7 +148,7 @@ def run_mic_listener():
                 continue
             
             try:
-                audio = recognizer.listen(source, timeout=1.0, phrase_time_limit=none)
+                audio = recognizer.listen(source, timeout=1.0, phrase_time_limit=16.0)
                 
                 # Double check typing flag before processing (Save API calls)
                 if is_user_typing: continue

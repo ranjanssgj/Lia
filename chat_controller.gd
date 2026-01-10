@@ -31,6 +31,7 @@ var waiting_for_audio = false
 var is_setup_mode = false
 var conversation_history: Array = []
 const MAX_HISTORY_LIMIT = 15
+const TTS_CHAR_SPEED = 16.0
 
 # --- SYSTEM PROMPT ---
 const CORE_SYSTEM_PROMPT = """You are Lia, a smart, energetic, and teasing desktop companion. You are NOT a generic assistant.
@@ -280,49 +281,87 @@ func _on_request_completed(result, response_code, headers, body):
 
 func parse_and_animate(full_response: String):
 	print("AI RAW: ", full_response)
-	var clean_text = full_response
-	var found_animations = [] 
 	
+	var clean_text = ""
+	var anim_schedule = [] # Stores: { "anim": "Wave", "delay": 2.5 }
+	
+	# 1. PARSE & CALCULATE TIMING
+	# We iterate through the raw string to find tags AND build clean text simultaneously.
 	var regex = RegEx.new()
-	regex.compile("\\[(.*?)\\]") 
+	regex.compile("\\[(.*?)\\]")
+	
 	var results = regex.search_all(full_response)
+	var current_raw_pos = 0
 	
 	for result in results:
-		var tag = result.get_string()
-		if tag in anim_map: found_animations.append(anim_map[tag])
-		clean_text = clean_text.replace(tag, "")
+		# A. Append text BEFORE this tag to clean_text
+		var match_start = result.get_start()
+		var pre_tag_text = full_response.substr(current_raw_pos, match_start - current_raw_pos)
+		clean_text += pre_tag_text
+		
+		# B. Calculate Delay based on text length SO FAR
+		var char_count = clean_text.length()
+		var estimated_delay = char_count / TTS_CHAR_SPEED
+		
+		# C. Add to Schedule
+		var tag_string = result.get_string()
+		if tag_string in anim_map:
+			anim_schedule.append({ 
+				"name": anim_map[tag_string], 
+				"delay": estimated_delay 
+			})
+			
+		current_raw_pos = result.get_end()
 	
+	# Append any remaining text after the last tag
+	clean_text += full_response.substr(current_raw_pos)
 	clean_text = clean_text.strip_edges()
+	
 	if clean_text == "": clean_text = "..."
 	
+	# 2. UPDATE UI & SEND TO PYTHON (Full Sentence)
 	output_label.text = "Lia: " + clean_text
 	
-	# Send to Python TTS
+	# Send FULL text to TTS (Natural Flow)
 	var packet = clean_text.to_utf8_buffer()
 	udp_sender.put_packet(packet)
 	
-	# Memory
+	# 3. MEMORY UPDATE
 	conversation_history.append({"role": "Lia", "text": clean_text})
 	if conversation_history.size() > MAX_HISTORY_LIMIT: conversation_history.pop_front()
 	Memory.context_data["chat_log"] = conversation_history
 	Memory.save_memory()
 	
-	if animator: _play_smooth_sequence(found_animations)
+	# 4. START ANIMATION SCHEDULER
+	_execute_anim_schedule(anim_schedule)
 
-func _play_smooth_sequence(anim_list: Array):
-	if anim_list.is_empty():
-		animator.play("Talking", 0.3)
-		return
-
-	for anim_name in anim_list:
-		if anim_name == "Hide":
-			if main_node and main_node.has_method("force_hide"): main_node.force_hide()
-		elif animator.has_animation(anim_name):
-			animator.play(anim_name, 0.3)
-			var length = animator.get_animation(anim_name).length
-			var wait_time = max(0.1, length - 0.3)
-			await get_tree().create_timer(wait_time).timeout
-		else:
-			animator.play("Talking", 0.3)
+# --- NEW SCHEDULER FUNCTION ---
+func _execute_anim_schedule(schedule: Array):
+	# Always start with talking/idle
+	if animator: animator.play("Talking", 0.3)
 	
+	var current_time = 0.0
+	
+	for item in schedule:
+		var target_time = item["delay"]
+		var anim_name = item["name"]
+		
+		# How long to wait from NOW until this animation should play
+		var wait_time = target_time - current_time
+		
+		if wait_time > 0:
+			await get_tree().create_timer(wait_time).timeout
+			current_time += wait_time
+		
+		# Play the scheduled animation
+		if animator and animator.has_animation(anim_name):
+			print("Playing Scheduled Anim: ", anim_name, " at ", current_time, "s")
+			animator.play(anim_name, 0.3)
+			
+			# Optional: Return to "Talking" after the animation finishes
+			# (Only if it's a one-shot action like Jump/Wave)
+			var anim_len = animator.get_animation(anim_name).length
+			# We don't await here because we want to stick to the schedule, 
+			# but you could queue 'Idle' if needed.
+
 	emit_signal("chat_ended")
