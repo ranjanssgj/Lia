@@ -1,10 +1,11 @@
-[gd_scene load_steps=41 format=3 uid="uid://co5lmcplhwff"]
+[gd_scene load_steps=42 format=3 uid="uid://co5lmcplhwff"]
 
 [ext_resource type="Script" uid="uid://dgpuscn53fv15" path="res://activity_monitor.gd" id="1_1bvp3"]
 [ext_resource type="Script" uid="uid://di0hf2pad608j" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://c2gd4vkyey36n" path="res://assets/Lia.glb" id="2_1bvp3"]
 [ext_resource type="PackedScene" uid="uid://cs3v67nfbhkpo" path="res://chat_bubble.tscn" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://bqu23xoq7sowq" path="res://chat_controller.gd" id="4_1bvp3"]
+[ext_resource type="AnimationLibrary" uid="uid://c0y84iqptehum" path="res://assets/animations/anime_essential_1.glb" id="5_4c57u"]
 [ext_resource type="AnimationLibrary" uid="uid://b56h8o8sxkgti" path="res://assets/animations/anime_essential_2.glb" id="5_7mycd"]
 [ext_resource type="Script" uid="uid://t0dptwicg2gq" path="res://ProactiveModule.gd" id="7_272bh"]
 [ext_resource type="Script" uid="uid://cp8quwdpfp0ne" path="res://VoiceReceiver.gd" id="8_5vw27"]
@@ -11538,7 +11539,7 @@ script = ExtResource("1_ig7tw")
 transform = Transform3D(0.02, 0, 0, 0, 0.02, 0, 0, 0, 0.02, 0.12254095, 1.5255165, -0.2910515)
 
 [node name="Armature" parent="Lia/Node" index="0"]
-transform = Transform3D(-99.56672, 2.758208, 8.88093, 8.926056, 1.5580497, 99.588646, 2.6084926, 99.94982, -1.797497, -7.7701836, -1.6984253, 1.5993503)
+transform = Transform3D(-99.56668, 2.7582078, 8.880931, 8.926052, 1.5580496, 99.58865, 2.6084917, 99.949814, -1.7974973, -7.7701836, -1.6984253, 1.5993503)
 
 [node name="Skeleton3D" parent="Lia/Node/Armature" index="0"]
 bones/6/rotation = Quaternion(0.17005289, 0.11332591, -0.11938313, 0.9715899)
@@ -11707,37 +11708,15 @@ transform = Transform3D(0.21305142, 0.97445184, 0.07108177, -0.24517703, 0.12374
 [node name="J_Bip_L_Middle3" parent="Lia/Node/Armature/Skeleton3D" index="36"]
 transform = Transform3D(-0.47588506, 0.8537637, 0.21123643, -0.25284636, 0.09723089, -0.96260834, -0.84237874, -0.5115013, 0.16960038, -0.15327951, -0.013570809, 0.74089223)
 
-[node name="ChatBubble" parent="Lia/Node/Armature/Skeleton3D/Face" index="0" node_paths=PackedStringArray("shortcut_context") instance=ExtResource("3_h2yge")]
-anchors_preset = 0
-offset_left = 682.0
-offset_top = 17.0
-offset_right = 769.0
-offset_bottom = 65.0
+[node name="ChatBubble" parent="Lia/Node/Armature/Skeleton3D/Face" index="0" instance=ExtResource("3_h2yge")]
 grow_horizontal = 1
 grow_vertical = 1
-shortcut_context = NodePath(".")
 script = ExtResource("4_1bvp3")
-
-[node name="PanelContainer" parent="Lia/Node/Armature/Skeleton3D/Face/ChatBubble" index="0"]
-offset_left = 44.0
-offset_top = 19.0
-offset_right = 112.0
-offset_bottom = 59.0
-
-[node name="RichTextLabel" parent="Lia/Node/Armature/Skeleton3D/Face/ChatBubble/PanelContainer/VBoxContainer" index="0"]
-custom_minimum_size = Vector2(100, 0)
-
-[node name="LineEdit" parent="Lia/Node/Armature/Skeleton3D/Face/ChatBubble/PanelContainer/VBoxContainer" index="1"]
-theme_override_constants/outline_size = 14
-
-[node name="ModeToggle" type="CheckBox" parent="Lia/Node/Armature/Skeleton3D/Face/ChatBubble/PanelContainer/VBoxContainer" index="2"]
-layout_mode = 2
-
-[node name="OllamaRequest" type="HTTPRequest" parent="Lia/Node/Armature/Skeleton3D/Face/ChatBubble"]
 
 [node name="AnimationPlayer" parent="Lia" index="1"]
 libraries = {
 &"": SubResource("AnimationLibrary_4u3ib"),
+&"anime_essential_1": ExtResource("5_4c57u"),
 &"anime_essential_2": ExtResource("5_7mycd")
 }
 autoplay = "FemaleLayingPose"
@@ -11753,7 +11732,7 @@ shape = SubResource("CapsuleShape3D_0xm2m")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8268446, 0.013455987)
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.99920464, 0.010440818, 0.038485073, -0.016756862, 0.98570436, 0.16764879, -0.036184512, -0.16816033, 0.9850953, 0.23216093, 1.7320473, 2.168922)
+transform = Transform3D(0.99642855, 0.0025842404, 0.08440099, -0.016756864, 0.98570436, 0.16764879, -0.08276117, -0.16846432, 0.98222727, 0.057301402, 2.4268427, 0.29417074)
 size = 3.913
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
@@ -11779,4 +11758,3 @@ script = ExtResource("8_5vw27")
 script = ExtResource("9_kek77")
 
 [editable path="Lia"]
-[editable path="Lia/Node/Armature/Skeleton3D/Face/ChatBubble"]

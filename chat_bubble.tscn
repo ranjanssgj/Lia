@@ -27,6 +27,7 @@ border_color = Color(0.6901961, 0.6901961, 0.6901961, 1)
 
 [node name="ChatBubble" type="Control"]
 layout_mode = 3
+anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 grow_horizontal = 2
@@ -51,3 +52,8 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_udckb")
 theme_override_styles/focus = SubResource("StyleBoxFlat_gjmhe")
 expand_to_text_length = true
+
+[node name="ModeToggle" type="CheckBox" parent="PanelContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="OllamaRequest" type="HTTPRequest" parent="."]

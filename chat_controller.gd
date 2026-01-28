@@ -163,7 +163,7 @@ func _on_text_submitted(new_text: String):
 		
 	emit_signal("chat_started")
 	if animator and animator.has_animation("Talking"): animator.play("Talking")
-	output_label.text = "You: " + new_text + "\n..."
+	output_label.text = "[color=#4facfe]You:[/color] " + new_text + "\n[i](Lia is thinking...)[/i]"
 	
 	conversation_history.append({"role": "User", "text": new_text})
 	input_field.release_focus()
@@ -320,7 +320,7 @@ func parse_and_animate(full_response: String):
 	if clean_text == "": clean_text = "..."
 	
 	# 2. UPDATE UI & SEND TO PYTHON (Full Sentence)
-	output_label.text = "Lia: " + clean_text
+	output_label.text = "[color=#ff9a9e]Lia:[/color] " + clean_text
 	
 	# Send FULL text to TTS (Natural Flow)
 	var packet = clean_text.to_utf8_buffer()
