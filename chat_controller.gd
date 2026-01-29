@@ -32,6 +32,8 @@ var is_setup_mode = false
 var conversation_history: Array = []
 const MAX_HISTORY_LIMIT = 15
 const TTS_CHAR_SPEED = 16.0
+var is_audio_mode = true # Default to Audio Mode
+var is_processing_reply = false
 
 # --- SYSTEM PROMPT ---
 const CORE_SYSTEM_PROMPT = """You are Lia, a smart, energetic, and teasing desktop companion. You are NOT a generic assistant.
@@ -75,6 +77,13 @@ const CORE_SYSTEM_PROMPT = """You are Lia, a smart, energetic, and teasing deskt
     
     Example: [WAVE] Hello!
     Example: [SIT_FOCUS] I am listening.
+	
+	--- ACTION COMMANDS ---
+To perform tasks, include these tags in your response (AT THE START):
+[EXEC:web:url] -> To open a website. (e.g. [EXEC:web:youtube.com])
+[EXEC:app:name] -> To open an app. (e.g. [EXEC:app:calculator])
+
+Example: "[EXEC:web:google.com] [SALUTE] Opening Google for you!"
 	"""
 
 var anim_map = {
@@ -103,6 +112,12 @@ func _ready():
 	input_field.focus_entered.connect(_on_input_focus)
 	input_field.focus_exited.connect(_on_input_unfocus)
 	
+	# --- MODE TOGGLE LOGIC ---
+	if mode_toggle:
+		mode_toggle.toggled.connect(_on_mode_toggled)
+		mode_toggle.button_pressed = true # Start in Audio Mode
+		_on_mode_toggled(true)
+	
 	udp_sender.set_dest_address(PYTHON_IP, PYTHON_TTS_PORT)
 	
 	if "chat_log" in Memory.context_data:
@@ -116,11 +131,25 @@ func _ready():
 func _send_sys_command(cmd: String):
 	udp_sender.put_packet(cmd.to_utf8_buffer())
 
+func _on_mode_toggled(pressed: bool):
+	is_audio_mode = pressed
+	if is_audio_mode:
+		mode_toggle.text = " Audio Mode "
+		# When switching TO Audio Mode, check if we should resume
+		if not input_field.has_focus() and input_field.text == "":
+			_send_sys_command("__SYS__RESUME_MIC")
+		print("Lia: Switched to Audio Mode")
+	else:
+		mode_toggle.text = " Chat Mode "
+		_send_sys_command("__SYS__PAUSE_MIC") # Always pause in Chat Mode
+		print("Lia: Switched to Chat Mode")
+
 func _on_input_focus():
 	_send_sys_command("__SYS__PAUSE_MIC")
 
 func _on_input_unfocus():
-	if input_field.text == "":
+	# Only resume if in Audio Mode AND text is empty AND we aren't waiting for a reply
+	if is_audio_mode and input_field.text == "" and not is_processing_reply:
 		_send_sys_command("__SYS__RESUME_MIC")
 
 func _load_env():
@@ -163,11 +192,15 @@ func _on_text_submitted(new_text: String):
 		
 	emit_signal("chat_started")
 	if animator and animator.has_animation("Talking"): animator.play("Talking")
-	output_label.text = "[color=#4facfe]You:[/color] " + new_text + "\n[i](Lia is thinking...)[/i]"
+	output_label.text = "You: " + new_text + "\n(Lia is thinking...)"
 	
 	conversation_history.append({"role": "User", "text": new_text})
 	input_field.release_focus()
-	_send_sys_command("__SYS__RESUME_MIC")
+	
+	# PAUSE MIC while thinking (VoiceReceiver calls this too)
+	is_processing_reply = true
+	_send_sys_command("__SYS__PAUSE_MIC")
+	
 	if USE_GROQ:
 		_send_request_to_groq(new_text)
 	else:
@@ -282,6 +315,22 @@ func _on_request_completed(result, response_code, headers, body):
 func parse_and_animate(full_response: String):
 	print("AI RAW: ", full_response)
 	
+	var text_to_speak = full_response
+	var cmd_regex = RegEx.new()
+	cmd_regex.compile("\\[EXEC:(.*?)\\]") # Finds [EXEC:web:google.com]
+	var cmd_match = cmd_regex.search(full_response)
+	
+	if cmd_match:
+		var command_content = cmd_match.get_string(1) # Gets "web:google.com"
+		
+		# 1. Send Command to Python (Port 4243)
+		var cmd_packet = ("__CMD__" + command_content).to_utf8_buffer()
+		udp_sender.put_packet(cmd_packet)
+		print("Lia Action: Sent command -> ", command_content)
+		
+		# 2. Remove the tag from speech so she doesn't read it out loud
+		text_to_speak = text_to_speak.replace(cmd_match.get_string(), "")
+	
 	var clean_text = ""
 	var anim_schedule = [] # Stores: { "anim": "Wave", "delay": 2.5 }
 	
@@ -320,9 +369,12 @@ func parse_and_animate(full_response: String):
 	if clean_text == "": clean_text = "..."
 	
 	# 2. UPDATE UI & SEND TO PYTHON (Full Sentence)
-	output_label.text = "[color=#ff9a9e]Lia:[/color] " + clean_text
+	output_label.text = "Lia: " + clean_text
 	
 	# Send FULL text to TTS (Natural Flow)
+	if is_audio_mode:
+		udp_sender.put_packet("__SYS__AUTO_UNPAUSE".to_utf8_buffer()) # Arm the logic
+		
 	var packet = clean_text.to_utf8_buffer()
 	udp_sender.put_packet(packet)
 	
@@ -331,6 +383,9 @@ func parse_and_animate(full_response: String):
 	if conversation_history.size() > MAX_HISTORY_LIMIT: conversation_history.pop_front()
 	Memory.context_data["chat_log"] = conversation_history
 	Memory.save_memory()
+	
+	# Reset flag so Unfocus can resume mic later if needed (though Auto-Unpause handles the immediate future)
+	is_processing_reply = false
 	
 	# 4. START ANIMATION SCHEDULER
 	_execute_anim_schedule(anim_schedule)

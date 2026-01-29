@@ -20,7 +20,8 @@ func _process(delta):
 		var text = packet.get_string_from_utf8()
 		
 		if text and text != "":
-			print("Voice Input Received: ", text)
+			print("VoiceReceiver: Packet Received from Python!")
+			print("VoiceReceiver Raw Text: ", text)
 			_handle_voice_command(text)
 
 func _handle_voice_command(text: String):

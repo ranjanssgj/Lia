@@ -15,7 +15,7 @@ func _ready():
 		# We are in Godot Editor -> Run .py file
 		path = python_cmd 
 		# Use "globalized" path to ensure python finds the file even if working dir is weird
-		var script_path = ProjectSettings.globalize_path("res://audio_server.py")
+		var script_path = ProjectSettings.globalize_path("res://my_project_env/audio_server.py")
 		args = [script_path]
 		print("Lia System: Starting Python Backend (%s)..." % python_cmd)
 	else:

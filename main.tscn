@@ -11536,7 +11536,7 @@ height = 1.6304932
 script = ExtResource("1_ig7tw")
 
 [node name="Lia" parent="." instance=ExtResource("2_1bvp3")]
-transform = Transform3D(0.02, 0, 0, 0, 0.02, 0, 0, 0, 0.02, 0.12254095, 1.5255165, -0.2910515)
+transform = Transform3D(0.02, 0, 0, 0, 0.02, 0, 0, 0, 0.02, -2.282805, 0.3192917, -0.2910515)
 
 [node name="Armature" parent="Lia/Node" index="0"]
 transform = Transform3D(-99.56668, 2.7582078, 8.880931, 8.926052, 1.5580496, 99.58865, 2.6084917, 99.949814, -1.7974973, -7.7701836, -1.6984253, 1.5993503)
@@ -11709,6 +11709,10 @@ transform = Transform3D(0.21305142, 0.97445184, 0.07108177, -0.24517703, 0.12374
 transform = Transform3D(-0.47588506, 0.8537637, 0.21123643, -0.25284636, 0.09723089, -0.96260834, -0.84237874, -0.5115013, 0.16960038, -0.15327951, -0.013570809, 0.74089223)
 
 [node name="ChatBubble" parent="Lia/Node/Armature/Skeleton3D/Face" index="0" instance=ExtResource("3_h2yge")]
+offset_left = 152.0
+offset_top = 92.0
+offset_right = 192.0
+offset_bottom = 132.0
 grow_horizontal = 1
 grow_vertical = 1
 script = ExtResource("4_1bvp3")
@@ -11732,7 +11736,7 @@ shape = SubResource("CapsuleShape3D_0xm2m")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8268446, 0.013455987)
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.99642855, 0.0025842404, 0.08440099, -0.016756864, 0.98570436, 0.16764879, -0.08276117, -0.16846432, 0.98222727, 0.057301402, 2.4268427, 0.29417074)
+transform = Transform3D(0.99642134, 0.0025695406, 0.0844867, -0.016756866, 0.98570436, 0.16764876, -0.082848124, -0.16846454, 0.9822199, -2.2864761, 0.59188056, 2.332842)
 size = 3.913
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
@@ -11758,3 +11762,4 @@ script = ExtResource("8_5vw27")
 script = ExtResource("9_kek77")
 
 [editable path="Lia"]
+[editable path="Lia/Node/Armature/Skeleton3D/Face/ChatBubble"]

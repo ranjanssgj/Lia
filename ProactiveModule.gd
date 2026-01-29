@@ -53,6 +53,7 @@ func _process(delta):
 func _on_chat_ended():
 	is_waiting_for_response = false
 	silence_duration = 0.0
+	speech_cooldown = 30.0 # Prevent immediate proactive trigger after chat
 
 # 1. EVENT: User is typing furiously
 func _on_user_working_hard():
@@ -105,7 +106,8 @@ func _on_vibe_check():
 		return
 
 	# D. PURE RANDOMNESS (Just because!)
-	if roll < random_talk_chance:
+	# Added Check: Must be silent for at least 60s
+	if silence_duration > 60.0 and roll < random_talk_chance:
 		_trigger("Say something random, funny, or affectionate to your best friend.")
 
 # --- HELPER ---
